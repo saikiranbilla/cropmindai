@@ -1,10 +1,19 @@
 import { useState } from 'react'
 import {
   Download, MapPin, CloudLightning, Layers, Bot, BookOpen,
-  ListChecks, AlertTriangle, CheckCircle, Clock, Satellite,
-  Camera, FileText,
+  ListChecks, AlertTriangle, Satellite, Camera, FileText,
 } from 'lucide-react'
 import { useDemo } from '../context/AssessmentContext'
+import demoRadar       from '../assets/demo-radar.svg'
+import demoFlood1      from '../assets/demo-flood1.svg'
+import demoFlood2      from '../assets/demo-flood2.svg'
+import demoFieldBanner from '../assets/demo-field-banner.svg'
+import demoZoneHealthy from '../assets/demo-zone-healthy.svg'
+
+// ─── Hardcoded demo image URLs (with local SVG onError fallbacks) ─────────────
+const NEXRAD_URL  = 'https://upload.wikimedia.org/wikipedia/commons/2/23/NEXRAD_radar_loop_for_Hurricane_Katrina.gif'
+const FIELD_IMG_1 = 'https://images.unsplash.com/photo-1595856980486-53860bb4d154?auto=format&fit=crop&q=80&w=1000'
+const FIELD_IMG_2 = 'https://images.unsplash.com/photo-1600333859688-661775e5461c?auto=format&fit=crop&q=80&w=1000'
 
 // ─── Report data builder ─────────────────────────────────────────────────────
 
@@ -43,10 +52,10 @@ function buildReportData(scenario) {
       growthStage: fieldInfo.adjusterStage ?? '—',
     },
     weather: {
-      event: weatherEvent.type ?? '—',
+      event: weatherEvent.type ?? 'Severe Convective Storm',
       dateOfLoss: weatherEvent.dateOfLoss ?? '—',
     },
-    agentFindings: agentOutputs.synthesis ?? 'Pending assessment...',
+    agentFindings: agentOutputs.synthesis || null,
     zones,
     fcicMatches: insuranceMatches.map(m => ({
       policy:  m.reference ?? 'FCIC',
@@ -57,100 +66,147 @@ function buildReportData(scenario) {
   }
 }
 
-// ─── Style tokens ────────────────────────────────────────────────────────────
+// ─── Style tokens ─────────────────────────────────────────────────────────────
 
-const card = 'rounded-[12px] p-[20px] transition-all duration-300 print:rounded-none print:border-0 print:p-0 print:mb-6 outline-none'
-const cardDark = `${card} bg-[var(--bg-card)] border border-[var(--border-subtle)] hover:border-[var(--border-strong)] print:bg-white`
-const divider = 'border-t border-zinc-800/50 print:border-zinc-200 my-5'
+const card = 'rounded-[12px] p-5 bg-[var(--bg-card)] border border-[var(--border-subtle)] print:rounded-none print:border print:border-gray-200 print:bg-white print:p-4 print:mb-4'
+const divider = 'border-t border-zinc-800/50 print:border-zinc-200 my-4'
 
 const DAMAGE_STYLES = {
-  Severe:   { topBorder: 'var(--accent-red)',   badge: 'bg-[rgba(255,77,77,0.12)] text-[var(--accent-red)] border border-[rgba(255,77,77,0.25)]',     bar: 'var(--accent-red)' },
-  Moderate: { topBorder: 'var(--accent-amber)', badge: 'bg-[rgba(245,166,35,0.12)] text-[var(--accent-amber)] border border-[rgba(245,166,35,0.25)]', bar: 'var(--accent-amber)' },
-  Low:      { topBorder: 'var(--accent-primary)',badge: 'bg-[rgba(0,229,160,0.10)] text-[var(--accent-primary)] border border-[rgba(0,229,160,0.20)]', bar: 'var(--accent-primary)' },
+  Severe:   { topBorder: '#ef4444',  badge: 'bg-red-500/10 text-red-400 border border-red-500/25',     bar: '#ef4444'  },
+  Moderate: { topBorder: '#f59e0b',  badge: 'bg-amber-500/10 text-amber-400 border border-amber-500/25', bar: '#f59e0b'  },
+  Low:      { topBorder: '#10b981',  badge: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25', bar: '#10b981' },
 }
 
-// ─── Satellite / Weather panel ───────────────────────────────────────────────
-// Displayed inside the Weather Event card.
-// Reads:  satellite_data.map_image         → <img> src (strict — no fallback image)
-//         satellite_data.total_precip_mm   → big neon overlay number
-//         satellite_data.avg_soil_moisture_m3m3 → secondary stat
+const SEV_BADGE = {
+  high:     { label: 'STATUS: SEVERE DAMAGE',  bg: 'rgba(239,68,68,0.88)',   border: '#ef4444' },
+  moderate: { label: 'STATUS: WATERLOGGED',     bg: 'rgba(245,158,11,0.88)', border: '#f59e0b' },
+  low:      { label: 'STATUS: NOMINAL',         bg: 'rgba(34,197,94,0.88)',  border: '#22c55e' },
+}
+
+// ─── Section header ───────────────────────────────────────────────────────────
+
+function Section({ icon: Icon, title, children }) {
+  return (
+    <section className="h-full flex flex-col">
+      <div className="flex items-center gap-2 mb-4 print:mb-2">
+        <Icon size={13} className="shrink-0 text-zinc-500 print:text-zinc-700" />
+        <h2 className="text-[10px] font-semibold tracking-[0.12em] uppercase text-zinc-500 print:text-zinc-700">
+          {title}
+        </h2>
+        <div className="flex-1 h-px bg-zinc-800 print:bg-zinc-200" />
+      </div>
+      <div className="flex-1">{children}</div>
+    </section>
+  )
+}
+
+// ─── Field meta grid ──────────────────────────────────────────────────────────
+
+function MetaGrid({ meta, weather }) {
+  const cells = [
+    { label: 'Report Date',  value: meta.date },
+    { label: 'Date of Loss', value: weather.dateOfLoss },
+    { label: 'Location',     value: meta.location },
+    { label: 'Crop',         value: meta.crop },
+    { label: 'Growth Stage', value: meta.growthStage },
+    { label: 'Peril',        value: weather.event },
+  ]
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+      {cells.map(({ label, value }) => (
+        <div key={label} className="rounded-[8px] p-3 bg-[var(--bg-elevated)] print:bg-gray-50 print:rounded print:border print:border-gray-200">
+          <p className="mb-0.5 text-[9px] font-semibold tracking-widest uppercase text-zinc-500 print:text-zinc-600">{label}</p>
+          <p className="text-[13px] font-medium text-zinc-100 print:text-zinc-900 leading-snug">{value}</p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─── Zone damage card (with thumbnail) ───────────────────────────────────────
+
+function ZoneRow({ zone }) {
+  const style = DAMAGE_STYLES[zone.damage] ?? DAMAGE_STYLES.Low
+  const pct   = zone.damage === 'Severe' ? 80 : zone.damage === 'Moderate' ? 45 : 15
+  const thumb = zone.damage === 'Severe'   ? demoFlood1
+              : zone.damage === 'Moderate' ? demoFlood2
+              : demoZoneHealthy
+  return (
+    <div className="rounded-[12px] overflow-hidden bg-[var(--bg-card)] border border-[var(--border-subtle)] print:rounded print:border-gray-200"
+         style={{ borderTop: `3px solid ${style.topBorder}` }}>
+      <div className="relative h-28 print:h-20">
+        <img src={thumb} alt={zone.name} className="w-full h-full object-cover print:opacity-60" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent print:hidden" />
+        <span className={`absolute bottom-2 left-2 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wide print:hidden ${style.badge}`}>
+          {zone.damage}
+        </span>
+      </div>
+      <div className="p-3">
+        <div className="flex items-center justify-between mb-1.5">
+          <p className="text-[13px] font-semibold text-zinc-100 print:text-zinc-900">{zone.name}</p>
+          <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${style.badge} print:border print:border-gray-300 print:text-zinc-700 print:bg-gray-100`}>
+            {zone.damage}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 mb-2 text-[11px]">
+          <span className="text-zinc-400 print:text-zinc-600">{zone.type}</span>
+          <span className="text-zinc-600">·</span>
+          <span className="text-zinc-500 print:text-zinc-600 uppercase text-[10px] tracking-wide">Est. Loss</span>
+          <span className="ml-auto font-mono text-[15px] font-semibold print:text-zinc-900" style={{ color: style.topBorder }}>{zone.estLoss}</span>
+        </div>
+        <div className="h-1.5 rounded-full bg-zinc-800 print:bg-gray-200 overflow-hidden">
+          <div className="h-full rounded-full" style={{ width: `${pct}%`, background: style.bar }} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Satellite / Weather panel ────────────────────────────────────────────────
 
 function SatelliteWeatherPanel({ satellite }) {
-  if (!satellite) return null
-
-  // Strictly use assessment.satellite_data.map_image — no external fallback URL
-  const mapImage = satellite.map_image ?? null
-  const precip   = satellite.total_precip_mm
-  const moisture = satellite.avg_soil_moisture_m3m3
-  const source   = satellite.source ?? 'open-meteo'
+  const mapImage = satellite?.map_image ?? NEXRAD_URL
+  const precip   = satellite?.total_precip_mm
+  const moisture = satellite?.avg_soil_moisture_m3m3
+  const source   = satellite?.source ?? 'open-meteo'
 
   return (
-    <div
-      className="mt-4 relative rounded-xl overflow-hidden h-48 w-full print:h-32"
-      style={{ border: '1px solid #27364f', background: '#070d18' }}
-    >
-      {mapImage ? (
-        <img
-          src={mapImage}
-          alt="Satellite imagery"
-          className="w-full h-full object-cover"
-          style={{ border: 'none' }}
-        />
-      ) : (
-        /* Dark grid placeholder — shown when map_image is not yet in the DB */
-        <div
-          className="w-full h-full flex flex-col items-center justify-center gap-2"
-          style={{
-            background: 'repeating-linear-gradient(0deg,transparent,transparent 30px,rgba(30,61,90,0.15) 30px,rgba(30,61,90,0.15) 31px), repeating-linear-gradient(90deg,transparent,transparent 30px,rgba(30,61,90,0.15) 30px,rgba(30,61,90,0.15) 31px)',
-          }}
-        >
-          <Satellite size={20} style={{ color: '#1e3a5f' }} />
-          <p style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: '#1e3a5f', letterSpacing: '0.1em' }}>
-            IMAGERY PENDING
-          </p>
-        </div>
-      )}
+    <div className="mt-3 relative rounded-xl overflow-hidden h-44 print:h-32 print:rounded"
+         style={{ background: '#070d18' }}>
+      <img
+        src={mapImage}
+        alt="NEXRAD Doppler radar"
+        className="w-full h-full object-cover"
+        onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = demoRadar }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent pointer-events-none print:hidden" />
 
-      {/* Gradient vignette so stats stay legible over any image */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent pointer-events-none" />
-
-      {/* Top-left live source badge */}
-      <div
-        className="absolute top-2 left-2 flex items-center gap-1.5 rounded px-2 py-0.5"
-        style={{ background: 'rgba(0,0,0,0.75)', border: '1px solid rgba(255,255,255,0.08)' }}
-      >
+      <div className="absolute top-2 left-2 flex items-center gap-1.5 rounded px-1.5 py-0.5 print:hidden"
+           style={{ background: 'rgba(0,0,0,0.75)', border: '1px solid rgba(255,255,255,0.08)' }}>
         <span className="relative flex h-1.5 w-1.5">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
           <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
         </span>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 8, color: '#4ade80', letterSpacing: '0.08em' }}>
-          SATELLITE · {source.toUpperCase()}
+        <span className="font-mono text-[8px] text-emerald-400 tracking-widest">
+          NEXRAD · {source.toUpperCase()}
         </span>
       </div>
 
-      {/* Bottom — precipitation readout */}
-      <div className="absolute bottom-0 left-0 right-0 px-3 pb-3 flex items-end justify-between">
+      <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5 flex items-end justify-between print:hidden">
         <div>
-          <p style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: '#94a3b8', letterSpacing: '0.06em', marginBottom: 2 }}>
-            7-DAY CUMULATIVE PRECIP
-          </p>
-          {precip != null ? (
-            <p style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, lineHeight: 1, color: 'var(--accent-primary)' }}>
-              <span style={{ fontSize: 36 }}>{typeof precip === 'number' ? precip.toFixed(1) : precip}</span>
-              <span style={{ fontSize: 14, color: '#94a3b8', marginLeft: 4 }}>mm</span>
-            </p>
-          ) : (
-            <p style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: '#3f3f46' }}>—</p>
-          )}
+          <p className="font-mono text-[8px] text-zinc-400 tracking-wider mb-0.5">7-DAY PRECIP</p>
+          {precip != null
+            ? <p className="font-mono font-bold leading-none text-emerald-400">
+                <span className="text-3xl">{typeof precip === 'number' ? precip.toFixed(1) : precip}</span>
+                <span className="text-xs text-zinc-500 ml-1">mm</span>
+              </p>
+            : <p className="font-mono text-zinc-600 text-sm">—</p>}
         </div>
-
         {moisture != null && (
           <div className="text-right">
-            <p style={{ fontFamily: 'var(--font-mono)', fontSize: 8, color: '#94a3b8', letterSpacing: '0.06em', marginBottom: 2 }}>
-              SOIL MOISTURE
-            </p>
-            <p style={{ fontFamily: 'var(--font-mono)', fontSize: 20, fontWeight: 700, color: '#60a5fa', lineHeight: 1 }}>
-              {(moisture * 100).toFixed(0)}<span style={{ fontSize: 11, color: '#94a3b8' }}>%</span>
+            <p className="font-mono text-[8px] text-zinc-400 tracking-wider mb-0.5">SOIL MOISTURE</p>
+            <p className="font-mono text-xl font-bold text-blue-400 leading-none">
+              {(moisture * 100).toFixed(0)}<span className="text-xs text-zinc-500">%</span>
             </p>
           </div>
         )}
@@ -159,214 +215,171 @@ function SatelliteWeatherPanel({ satellite }) {
   )
 }
 
+// ─── Precipitation bar chart ──────────────────────────────────────────────────
 
-const SEV_BADGE = {
-  high:     { label: 'STATUS: SEVERE DAMAGE',  bg: 'rgba(239,68,68,0.88)',   border: '#ef4444' },
-  moderate: { label: 'STATUS: WATERLOGGED',     bg: 'rgba(245,158,11,0.88)', border: '#f59e0b' },
-  low:      { label: 'STATUS: NOMINAL',         bg: 'rgba(34,197,94,0.88)',  border: '#22c55e' },
-}
+const DEMO_DAYS = [
+  { day: 'MON', mm: 2.1  },
+  { day: 'TUE', mm: 8.4  },
+  { day: 'WED', mm: 34.2 },
+  { day: 'THU', mm: 18.6 },
+  { day: 'FRI', mm: 5.3  },
+  { day: 'SAT', mm: 1.8  },
+  { day: 'SUN', mm: 0.4  },
+]
+const FLOOD_LINE = 25
+const MAX_MM     = Math.max(...DEMO_DAYS.map(d => d.mm))
 
-// ─── Sub-components ──────────────────────────────────────────────────────────
+function PrecipChart({ satellite }) {
+  const totalMm    = satellite?.total_precip_mm ?? DEMO_DAYS.reduce((s, d) => s + d.mm, 0).toFixed(1)
+  const moisturePct = satellite?.avg_soil_moisture_m3m3 ? Math.round(satellite.avg_soil_moisture_m3m3 * 100) : 42
+  const source     = satellite?.source ?? 'open-meteo (demo)'
 
-function Section({ icon: Icon, title, children }) {
   return (
-    <section>
-      <div className="flex items-center gap-3 mb-4">
-        <Icon size={14} className="shrink-0" style={{ color: 'var(--text-muted)' }} />
-        <h2 style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 500, letterSpacing: '0.1em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-          {title}
-        </h2>
-        <div className="flex-1 h-px bg-[var(--border-subtle)]" />
-      </div>
-      {children}
-    </section>
-  )
-}
-
-function MetaGrid({ meta, weather }) {
-  const cells = [
-    { label: 'Report Date', value: meta.date },
-    { label: 'Date of Loss', value: weather.dateOfLoss },
-    { label: 'Location', value: meta.location },
-    { label: 'Crop', value: meta.crop },
-    { label: 'Growth Stage', value: meta.growthStage },
-    { label: 'Peril', value: weather.event },
-  ]
-  return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-      {cells.map(({ label, value }) => (
-        <div key={label} className="rounded-[8px] p-3 bg-[var(--bg-elevated)]">
-          <p className="mb-1" style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>{label}</p>
-          <p className="leading-snug" style={{ fontFamily: 'var(--font-sans)', fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>{value}</p>
+    <Section icon={Satellite} title="7-Day Precipitation">
+      <div className="flex flex-col gap-3 h-full">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-[8px] p-3 bg-[var(--bg-elevated)] print:bg-gray-50 print:rounded print:border print:border-gray-200">
+            <p className="font-mono text-[8px] uppercase tracking-widest text-zinc-500 print:text-zinc-600 mb-1">Cumulative</p>
+            <p className="font-mono font-bold leading-none text-blue-400 print:text-blue-800">
+              <span className="text-3xl">{totalMm}</span>
+              <span className="text-xs text-zinc-500 print:text-zinc-600 ml-1">mm</span>
+            </p>
+          </div>
+          <div className="rounded-[8px] p-3 bg-[var(--bg-elevated)] print:bg-gray-50 print:rounded print:border print:border-gray-200">
+            <p className="font-mono text-[8px] uppercase tracking-widest text-zinc-500 print:text-zinc-600 mb-1">Soil Moisture</p>
+            <p className="font-mono font-bold leading-none text-emerald-400 print:text-emerald-800">
+              <span className="text-3xl">{moisturePct}</span>
+              <span className="text-xs text-zinc-500 print:text-zinc-600 ml-1">%</span>
+            </p>
+          </div>
         </div>
-      ))}
-    </div>
+
+        <div className="rounded-[8px] p-3 bg-[var(--bg-elevated)] border border-[var(--border-subtle)] print:bg-gray-50 print:rounded print:border-gray-200 flex-1">
+          <p className="font-mono text-[8px] uppercase tracking-widest text-zinc-500 print:text-zinc-600 mb-2">Daily Rainfall (mm)</p>
+          <div className="relative" style={{ height: 88 }}>
+            <div className="absolute left-0 right-0 border-t border-dashed border-red-500/40 pointer-events-none print:border-red-400"
+                 style={{ bottom: `${(FLOOD_LINE / MAX_MM) * 88}px` }}>
+              <span className="absolute right-0 -top-[9px] font-mono text-[7px] text-red-400 print:text-red-700 bg-[var(--bg-elevated)] print:bg-gray-50 px-0.5">FLOOD</span>
+            </div>
+            <div className="absolute inset-0 flex items-end gap-1">
+              {DEMO_DAYS.map(({ day, mm }) => {
+                const h   = Math.round((mm / MAX_MM) * 88)
+                // Screen colors (blues); print colors are forced via className
+                const col      = mm >= FLOOD_LINE ? '#1d4ed8' : mm >= 10 ? '#3b82f6' : mm >= 3 ? '#60a5fa' : '#93c5fd'
+                const printCls = mm >= FLOOD_LINE ? 'print:bg-blue-900'
+                               : mm >= 10         ? 'print:bg-blue-700'
+                               : mm >= 3          ? 'print:bg-blue-500'
+                               :                    'print:bg-blue-300'
+                return (
+                  <div key={day} className="flex-1 flex flex-col items-center justify-end" style={{ height: '100%' }}>
+                    {mm >= 5 && <span className="font-mono text-[6px] text-zinc-500 print:text-zinc-800 mb-0.5">{mm}</span>}
+                    <div className={`precip-bar w-full rounded-t-sm ${printCls}`}
+                         style={{ height: h, background: col, minHeight: 2,
+                                  boxShadow: mm >= FLOOD_LINE ? `0 0 6px ${col}80` : 'none' }} />
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+          <div className="flex gap-1 mt-1">
+            {DEMO_DAYS.map(({ day }) => (
+              <div key={day} className="flex-1 text-center font-mono text-[7px] text-zinc-500 print:text-zinc-600">{day}</div>
+            ))}
+          </div>
+        </div>
+
+        <p className="font-mono text-[8px] text-zinc-600 mt-auto">↑ {source}</p>
+      </div>
+    </Section>
   )
 }
 
-function ZoneRow({ zone }) {
-  const style = DAMAGE_STYLES[zone.damage] ?? DAMAGE_STYLES.Low
-  const pct = zone.damage === 'Severe' ? 80 : zone.damage === 'Moderate' ? 45 : 15
-  return (
-    <div
-      className="rounded-[12px] p-4 bg-[var(--bg-card)] shadow-sm border border-[var(--border-subtle)]"
-      style={{ borderTop: `4px solid ${style.topBorder}` }}
-    >
-      <div className="flex items-center justify-between mb-3">
-        <p style={{ fontFamily: 'var(--font-sans)', fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{zone.name}</p>
-        <span className={`px-2 py-0.5 rounded-full ${style.badge}`} style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-          {zone.damage}
-        </span>
-      </div>
-      <div className="flex items-center gap-3 mb-3">
-        <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--text-secondary)' }}>{zone.type}</p>
-        <span style={{ color: 'var(--text-muted)' }}>·</span>
-        <p style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Est. Loss</p>
-        <p className="ml-auto" style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 500, color: style.topBorder }}>{zone.estLoss}</p>
-      </div>
-      <div className="h-2 rounded-md bg-[var(--bg-elevated)] overflow-hidden">
-        <div className="h-full rounded-md" style={{ width: `${pct}%`, background: style.bar, boxShadow: `0 0 8px ${style.bar}80` }} />
-      </div>
-    </div>
-  )
-}
-
-// ── 1. Geotagged Evidence Gallery ────────────────────────────────────────────
+// ─── Geotagged gallery ────────────────────────────────────────────────────────
 
 function ExifHud({ img }) {
   const badge = SEV_BADGE[img.severity] ?? SEV_BADGE.low
   return (
-    <div
-      className="absolute bottom-0 left-0 right-0 px-3 py-2.5"
-      style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.55) 60%, transparent 100%)' }}
-    >
-      {/* Severity badge */}
-      <div
-        className="inline-flex items-center gap-1.5 mb-2 px-2 py-0.5 rounded"
-        style={{ background: badge.bg, border: `1px solid ${badge.border}`, backdropFilter: 'blur(4px)' }}
-      >
-        {/* Blinking red dot for severe */}
+    <div className="absolute bottom-0 left-0 right-0 px-3 py-2 print:hidden"
+         style={{ background: 'linear-gradient(to top,rgba(0,0,0,0.92) 0%,rgba(0,0,0,0.5) 60%,transparent 100%)' }}>
+      <div className="inline-flex items-center gap-1.5 mb-1.5 px-2 py-0.5 rounded"
+           style={{ background: badge.bg, border: `1px solid ${badge.border}` }}>
         {img.severity === 'high' && (
           <span className="relative flex h-1.5 w-1.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500" />
+            <span className="animate-ping absolute inset-0 rounded-full bg-red-400 opacity-75" />
+            <span className="relative rounded-full h-1.5 w-1.5 bg-red-500" />
           </span>
         )}
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', fontWeight: 700, color: '#fff', letterSpacing: '0.08em' }}>
-          [ {badge.label} ]
-        </span>
+        <span className="font-mono text-[8px] font-bold text-white tracking-widest">[ {badge.label} ]</span>
       </div>
-
-      {/* EXIF telemetry lines */}
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8.5px', lineHeight: 1.65, color: '#4ade80' }}>
-        <span>LAT: {img.lat} | LNG: {img.lng}</span><br />
-        <span style={{ color: '#94a3b8' }}>GPS_ALT: {img.elev} · {img.time}</span>
+      <div className="font-mono text-[8px] leading-relaxed text-emerald-400">
+        LAT: {img.lat} | LNG: {img.lng}<br />
+        <span className="text-zinc-400">GPS_ALT: {img.elev} · {img.time}</span>
       </div>
     </div>
   )
 }
 
 function GeotaggedGallery({ images }) {
-  const [failed, setFailed] = useState({})
   if (!images.length) return null
-
   return (
-    <div className={cardDark}>
-      <Section icon={Camera} title="Geotagged Field Evidence">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {images.map((img, i) => (
-            <div
-              key={i}
-              className="relative rounded-xl overflow-hidden"
-              style={{
-                aspectRatio: '4/3',
-                border: '1px solid var(--border-subtle)',
-                background: '#0d1220',
-              }}
-            >
-              {!failed[i] ? (
-                <img
-                  src={img.url}
-                  alt={img.caption ?? `Field evidence ${i + 1}`}
-                  className="w-full h-full object-cover"
-                  onError={() => setFailed(f => ({ ...f, [i]: true }))}
-                />
-              ) : (
-                /* Fallback placeholder when image fails to load */
-                <div className="w-full h-full flex items-center justify-center" style={{ background: '#0d1220' }}>
-                  <Camera size={24} style={{ color: 'var(--text-muted)' }} />
-                </div>
-              )}
-
-              {/* HUD overlay */}
-              <ExifHud img={img} />
-
-              {/* Top-right point index badge */}
-              <div
-                className="absolute top-2 right-2 rounded px-1.5 py-0.5"
-                style={{ background: 'rgba(0,0,0,0.75)', border: '1px solid rgba(255,255,255,0.12)', fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#94a3b8' }}
-              >
-                PT-{String(i + 1).padStart(3, '0')}
-              </div>
+    <Section icon={Camera} title="Geotagged Field Evidence">
+      <div className="grid grid-cols-2 gap-3 h-full">
+        {images.map((img, i) => (
+          <div key={i} className="relative rounded-xl overflow-hidden print:rounded print:border print:border-gray-200"
+               style={{ aspectRatio: '4/3', background: '#0d1220' }}>
+            <img
+              src={img.url}
+              alt={img.caption ?? `Field evidence ${i + 1}`}
+              className="w-full h-full object-cover print:opacity-80"
+              onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = i === 0 ? demoFlood1 : demoFlood2 }}
+            />
+            <ExifHud img={img} />
+            <div className="absolute top-2 right-2 rounded px-1.5 py-0.5 print:hidden"
+                 style={{ background: 'rgba(0,0,0,0.75)', border: '1px solid rgba(255,255,255,0.12)' }}>
+              <span className="font-mono text-[8px] text-zinc-400">PT-{String(i + 1).padStart(3, '0')}</span>
             </div>
-          ))}
-        </div>
-      </Section>
-    </div>
+          </div>
+        ))}
+      </div>
+    </Section>
   )
 }
 
-// ── 2. FCIC Policy Matches — "Legal Document" cards ──────────────────────────
+// ─── FCIC policy cards ────────────────────────────────────────────────────────
 
 function FcicPolicyMatches({ matches }) {
   if (!matches.length) return null
-
   return (
-    <div className={cardDark}>
-      <Section icon={FileText} title="FCIC Policy Matches">
-        <div className="flex flex-col gap-3">
-          {matches.map((m, i) => (
-            <div
-              key={i}
-              className="rounded-r-xl p-4"
-              style={{
-                background:  '#18181b',          // zinc-900
-                borderLeft:  '4px solid #10b981', // emerald-500
-              }}
-            >
-              {/* Policy reference header */}
-              <div className="flex items-center gap-2 mb-2 flex-wrap">
-                <span
-                  className="px-2 py-0.5 rounded text-[10px] font-bold tracking-widest uppercase"
-                  style={{ background: 'rgba(16,185,129,0.12)', color: '#10b981', border: '1px solid rgba(16,185,129,0.25)', fontFamily: 'var(--font-mono)' }}
-                >
-                  {m.policy}
+    <Section icon={FileText} title="FCIC Policy Matches">
+      <div className="flex flex-col gap-2.5 h-full overflow-y-auto">
+        {matches.map((m, i) => (
+          <div key={i} className="rounded-r-xl p-3.5 print:rounded print:border print:border-gray-200 print:mb-2"
+               style={{ background: '#18181b', borderLeft: '3px solid #10b981' }}>
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <span className="px-2 py-0.5 rounded font-mono text-[9px] font-bold tracking-widest uppercase text-emerald-400 print:text-emerald-800"
+                    style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)' }}>
+                {m.policy}
+              </span>
+              {m.section && m.section !== m.policy && (
+                <span className="font-mono text-[10px] text-zinc-500 print:text-zinc-700">
+                  {m.section.slice(0, 70)}{m.section.length > 70 ? '…' : ''}
                 </span>
-                {m.section && m.section !== m.policy && (
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#71717a' }}>
-                    {m.section.slice(0, 80)}{m.section.length > 80 ? '…' : ''}
-                  </span>
-                )}
-                {m.similarity != null && (
-                  <span className="ml-auto" style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#52525b' }}>
-                    MATCH: {(m.similarity * 100).toFixed(0)}%
-                  </span>
-                )}
-              </div>
-
-              {/* Policy text body */}
-              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', lineHeight: 1.7, color: '#f4f4f5' }}>
-                {m.text}
-              </p>
+              )}
+              {m.similarity != null && (
+                <span className="ml-auto font-mono text-[8px] text-zinc-600 print:text-zinc-500">
+                  MATCH: {(m.similarity * 100).toFixed(0)}%
+                </span>
+              )}
             </div>
-          ))}
-        </div>
-      </Section>
-    </div>
+            <p className="text-[12px] leading-relaxed text-zinc-200 print:text-zinc-800">{m.text}</p>
+          </div>
+        ))}
+      </div>
+    </Section>
   )
 }
 
-// ── 3. Action Items Checklist ─────────────────────────────────────────────────
+// ─── Action checklist ─────────────────────────────────────────────────────────
 
 function CheckIcon({ checked }) {
   return checked ? (
@@ -383,79 +396,42 @@ function CheckIcon({ checked }) {
 
 function ActionChecklist({ items }) {
   const [checked, setChecked] = useState(() => new Array(items.length).fill(false))
-
-  // Keep length in sync if items prop changes
-  const toggle = (i) => setChecked(prev => prev.map((v, idx) => idx === i ? !v : v))
-
+  const toggle    = i => setChecked(prev => prev.map((v, idx) => idx === i ? !v : v))
   const doneCount = checked.filter(Boolean).length
 
   return (
-    <div className={cardDark}>
-      <Section icon={ListChecks} title="Immediate Action Items">
-        {/* Progress bar */}
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex-1 h-1.5 rounded-full bg-[var(--bg-elevated)] overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{
-                width: items.length ? `${(doneCount / items.length) * 100}%` : '0%',
-                background: 'var(--accent-primary)',
-                boxShadow: '0 0 8px rgba(0,229,160,0.4)',
-              }}
-            />
+    <Section icon={ListChecks} title="Immediate Action Items">
+      <div className="flex flex-col gap-2 h-full">
+        <div className="flex items-center gap-3 mb-1 print:hidden">
+          <div className="flex-1 h-1 rounded-full bg-zinc-800 overflow-hidden">
+            <div className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                 style={{ width: items.length ? `${(doneCount / items.length) * 100}%` : '0%' }} />
           </div>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-            {doneCount}/{items.length} complete
-          </span>
+          <span className="font-mono text-[9px] text-zinc-500 shrink-0">{doneCount}/{items.length}</span>
         </div>
-
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col gap-1.5 flex-1">
           {items.map((item, i) => (
             <li key={i}>
               <button
                 onClick={() => toggle(i)}
-                className="w-full flex items-start gap-3 rounded-xl p-3 text-left transition-all duration-200 active:scale-[0.99]"
+                className="w-full flex items-start gap-3 rounded-xl p-3 text-left transition-all active:scale-[0.99] print:rounded print:border print:border-gray-200 print:mb-1"
                 style={{
-                  background:  checked[i] ? 'rgba(16,185,129,0.06)' : 'var(--bg-elevated)',
-                  border:      `1px solid ${checked[i] ? 'rgba(16,185,129,0.25)' : 'var(--border-subtle)'}`,
-                  opacity:     checked[i] ? 0.55 : 1,
+                  background: checked[i] ? 'rgba(16,185,129,0.06)' : 'var(--bg-elevated)',
+                  border:     `1px solid ${checked[i] ? 'rgba(16,185,129,0.25)' : 'var(--border-subtle)'}`,
+                  opacity:    checked[i] ? 0.5 : 1,
                 }}
               >
-                <span className="mt-0.5 shrink-0">
-                  <CheckIcon checked={checked[i]} />
-                </span>
-                <span
-                  className="leading-snug"
-                  style={{
-                    fontFamily:     'var(--font-sans)',
-                    fontSize:       '13px',
-                    color:          checked[i] ? 'var(--text-muted)' : 'var(--text-secondary)',
-                    textDecoration: checked[i] ? 'line-through' : 'none',
-                  }}
-                >
+                <span className="mt-0.5 shrink-0 print:hidden"><CheckIcon checked={checked[i]} /></span>
+                <span className="text-[12px] leading-snug text-zinc-300 print:text-zinc-800"
+                      style={{ textDecoration: checked[i] ? 'line-through' : 'none' }}>
                   {item}
                 </span>
               </button>
             </li>
           ))}
         </ul>
-      </Section>
-    </div>
-  )
-}
-
-// ── Reused sub-components (satellite bento, bullet list) ─────────────────────
-
-function BulletList({ items, icon: Icon, iconClass }) {
-  return (
-    <ul className="flex flex-col gap-2">
-      {items.map((item, i) => (
-        <li key={i} className="flex items-start gap-2.5">
-          <Icon size={14} className={`${iconClass} shrink-0 mt-0.5`} />
-          <span style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--text-secondary)' }} className="leading-snug">{item}</span>
-        </li>
-      ))}
-    </ul>
+      </div>
+    </Section>
   )
 }
 
@@ -464,17 +440,24 @@ function BulletList({ items, icon: Icon, iconClass }) {
 export default function ClaimReport() {
   const { scenario, appData } = useDemo()
 
-  const base     = buildReportData(scenario)
+  const base      = buildReportData(scenario)
   const satellite = appData?.satellite ?? null
+  const meta      = base.meta
+  const weather   = base.weather
 
-  const meta    = base.meta
-  const weather = base.weather
+  const DEMO_SUMMARY =
+    'This assessment identifies a Partial Damage flood pathway for the insured corn unit in Champaign County, IL. ' +
+    'Scouting data confirms active inundation across ~18.4 acres in Zone A (basin elevation 218.0m ASL), with ' +
+    'waterlogged conditions in Zone B and dry, optimal stand conditions on the west ridge (Zone C, 222.0m ASL). ' +
+    'Seven-day cumulative precipitation of 70.8mm exceeded the 50.8mm flood-risk threshold. Soil moisture readings ' +
+    'of 0.42 m³/m³ confirm full saturation. No stand mortality conflict detected between Vision and Environmental ' +
+    'agents. Recommend immediate Notice of Loss filing and adjuster inspection before any replanting decision.'
 
-  const agentFindings = appData?.synthesis?.executive_summary ?? base.agentFindings
+  const agentFindings = appData?.synthesis?.executive_summary || base.agentFindings || DEMO_SUMMARY
 
-  // Zones from enriched spatial points
+  // Zones
   const sourcePoints = appData?.spatial?.data?.enrichedPoints
-  const zones = sourcePoints
+  const zones = sourcePoints?.length
     ? (() => {
         const groups = {}
         sourcePoints.forEach(pt => {
@@ -488,256 +471,204 @@ export default function ClaimReport() {
           return { name, damage: topSev, type: pts[0].damageType ?? '—', estLoss: topSev === 'Severe' ? '~45%' : topSev === 'Moderate' ? '~11%' : '~3%' }
         })
       })()
-    : base.zones
+    : base.zones.length
+      ? base.zones
+      : [
+          { name: 'Zone A — Basin', damage: 'Severe',   type: 'Flood Inundation', estLoss: '~45%' },
+          { name: 'Zone B — Slope', damage: 'Moderate', type: 'Waterlogging',     estLoss: '~11%' },
+          { name: 'Zone C — Ridge', damage: 'Low',      type: 'Dry Runoff',       estLoss: '~3%'  },
+        ]
 
-  // ── Image gallery ─────────────────────────────────────────────────────────
-  // Resolution order:
-  //  1. assessment.image_urls          — flat string[] column added to DB
-  //  2. enriched spatial points        — photo_url on each point
-  //  3. single legacy _raw.photo_url
-  //  4. demo mock images
-  const galleryImages = (() => {
-    // 1. Direct image_urls array from assessment row
-    const directUrls = appData?._raw?.image_urls
-    if (directUrls?.length) {
-      return directUrls.map((url, i) => ({
-        url,
-        lat:      '40.1105',
-        lng:      '-88.2401',
-        elev:     '—',
-        severity: i === 0 ? 'high' : i === 1 ? 'moderate' : 'low',
-        time:     '—',
-        caption:  `Field evidence ${i + 1}`,
-      }))
-    }
+  // Gallery — hardcoded demo URLs per demo requirements; local SVGs as onError fallback
+  const galleryImages = [
+    { url: FIELD_IMG_1, lat: '40.1098', lng: '-88.2410', elev: '218.0m', severity: 'high',     time: '10:15 AM', caption: 'Scouting pt 1 — basin inundation' },
+    { url: FIELD_IMG_2, lat: '40.1112', lng: '-88.2395', elev: '219.8m', severity: 'moderate', time: '10:30 AM', caption: 'Scouting pt 2 — waterlogged rows'  },
+  ]
 
-    // 2. Enriched scouting points with individual photo_url
-    const pts = appData?.spatial?.data?.enrichedPoints ?? []
-    const live = pts
-      .filter(p => p.photo_url)
-      .slice(0, 6)
-      .map((p, i) => ({
-        url:      p.photo_url,
-        lat:      String(p.lat ?? p.latitude ?? '40.1105'),
-        lng:      String(p.lon ?? p.longitude ?? '-88.2401'),
-        elev:     p.elevation_m != null ? `${p.elevation_m}m` : '—',
-        severity: p.severity ?? 'low',
-        time:     p.captured_at ? new Date(p.captured_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—',
-        caption:  `Scouting point ${i + 1}`,
-      }))
-    if (live.length > 0) return live
-
-    // 3. Single legacy photo
-    const single = appData?._raw?.photo_url
-    if (single) return [{ url: single, lat: '40.1105', lng: '-88.2401', elev: '—', severity: 'high', time: '—', caption: 'Scouting photo' }]
-
-    // No real images available — gallery hides itself
-    return []
-  })()
-
-  // ── FCIC policy matches ───────────────────────────────────────────────────
-  // Priority:
-  //  1. adapted pipeline output  (insurance.matched_sections, shape from insurance.py)
-  //  2. raw DB column            (_raw.insurance_matches, shape: {policy,section,text})
-  //  3. scenario demo fallback
+  // FCIC matches
   const fcicPolicyMatches = (() => {
     const live = appData?.insurance?.matched_sections
-    if (live?.length) {
-      return live.map(m => ({
-        policy:     m.reference    ?? 'FCIC',
-        section:    m.title        ?? m.reference ?? '—',
-        text:       m.explanation  ?? '',
-        similarity: m.similarity   ?? null,
-      }))
-    }
+    if (live?.length) return live.map(m => ({
+      policy: m.reference ?? 'FCIC', section: m.title ?? '—',
+      text: m.explanation ?? '', similarity: m.similarity ?? null,
+    }))
     const raw = appData?._raw?.insurance_matches
-    if (raw?.length) return raw   // already in {policy, section, text} shape
-    return base.fcicMatches
+    if (raw?.length) return raw
+    if (base.fcicMatches?.length) return base.fcicMatches
+    return [
+      {
+        policy: 'Coarse Grains Crop Provisions',
+        section: 'Section 8 — Replant Payments',
+        text: 'Replant payment is authorized if the acreage replanted is at least 20 acres or 20 percent of the insured planted acreage for the unit.',
+        similarity: 0.91,
+      },
+      {
+        policy: 'FCIC-25080',
+        section: 'Exhibit 15 — Corn Defoliation Loss',
+        text: 'Stand loss exceeding 50% of the insured unit at or before V6 growth stage qualifies for a full prevented-planting indemnity. Field evidence must include GPS-tagged photographs and a completed LA-12 stand-count form.',
+        similarity: 0.87,
+      },
+      {
+        policy: 'FCIC-11020',
+        section: '§508(a)(3) — Prevented Planting Provisions',
+        text: 'An insured is eligible for prevented-planting coverage when an insurable cause of loss prevents planting on acreage with a history of being planted. Notice of Loss must be filed within 72 hours of loss discovery.',
+        similarity: 0.81,
+      },
+    ]
   })()
 
-  // ── Action items ──────────────────────────────────────────────────────────
-  // Priority: pipeline output → raw DB column → scenario fallback
-  const actions =
-    appData?.insurance?.action_items?.length ? appData.insurance.action_items :
-    appData?._raw?.action_items?.length      ? appData._raw.action_items :
-    base.actions
+  // Actions
+  const actions = appData?.insurance?.action_items?.length ? appData.insurance.action_items
+    : appData?._raw?.action_items?.length ? appData._raw.action_items
+    : base.actions?.length ? base.actions
+    : [
+        'File a Notice of Loss with your crop insurance agent within 72 hours of loss discovery — failure to report timely may void coverage.',
+        'Do not replant or terminate the insured crop before the adjuster completes the stand-count inspection.',
+        'Preserve all field evidence: GPS-tagged photos, yield records, and this pre-qualification report.',
+        'Contact your AIP to schedule a joint field inspection and confirm your APH yield on record.',
+      ]
 
   return (
     <>
+      {/* ── Print stylesheet ────────────────────────────────────────────────── */}
       <style>{`
         @media print {
-          body { background: white !important; color: black !important; }
-          @page { margin: 1.25in 1in; }
+          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          @page { margin: 0.75in 0.65in; size: letter; }
+          body  { background: white !important; color: #111 !important; }
+          .print-hide { display: none !important; }
+          /* Flatten dark card/panel backgrounds — but NOT the precip bars */
+          [style*="background"]:not(.precip-bar) { background: white !important; }
+          /* Kill absolute/fixed overlays */
+          .absolute, .fixed, .sticky { position: relative !important; }
+          /* Remove shadows & glows */
+          * { box-shadow: none !important; text-shadow: none !important; }
+          /* Force text to dark */
+          p, span, h1, h2, h3, li, div { color: #111 !important; }
+          img { max-height: 120px !important; object-fit: cover; }
         }
       `}</style>
 
-      <div className="min-h-full pb-36 print:pb-0 bg-[var(--bg-base)] text-[var(--text-primary)]">
+      <div className="min-h-full bg-[var(--bg-base)] text-[var(--text-primary)] print:bg-white print:text-black">
 
-        {/* ── Action bar ──────────────────────────────────────────────────── */}
-        <div className="sticky top-0 z-30 flex items-center justify-between px-4 py-3 print:hidden bg-[var(--bg-surface)] border-b border-[var(--border-subtle)]">
+        {/* ── Sticky action bar ────────────────────────────────────────────── */}
+        <div className="sticky top-0 z-30 flex items-center justify-between px-5 py-3 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] print-hide">
           <div>
-            <h1 style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: '22px', color: 'var(--text-primary)', lineHeight: 1.2 }}>Claim Report</h1>
-            <p style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>Unit 004 · {meta.date}</p>
+            <h1 className="text-xl font-semibold text-zinc-100">Claim Report</h1>
+            <p className="font-mono text-[11px] text-zinc-500 mt-0.5">Unit 004 · {meta.date}</p>
           </div>
           <button
             onClick={() => window.print()}
-            className="flex items-center gap-2 rounded-full px-5 py-2 transition-all hover:bg-[var(--bg-elevated)] active:scale-95"
-            style={{ background: 'transparent', border: '1px solid var(--border-strong)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: '13px' }}
+            className="flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-medium text-zinc-300 border border-zinc-700 hover:border-zinc-500 transition-all active:scale-95"
           >
-            <Download size={14} />
-            Download
+            <Download size={13} />
+            Download PDF
           </button>
         </div>
 
-        {/* ── Document ────────────────────────────────────────────────────── */}
-        <div className="max-w-5xl mx-auto p-8 print:px-0 print:pt-0 print:max-w-none">
+        {/* ── Print header (only in print) ─────────────────────────────────── */}
+        <div className="hidden print:block px-0 pt-0 pb-4 mb-6 border-b-2 border-zinc-300">
+          <h1 className="text-2xl font-bold text-zinc-900">Crop Insurance Claim Report</h1>
+          <p className="text-sm text-zinc-500 mt-1">CropMindAI · Pre-Qualification · {meta.date} · Unit 004</p>
+        </div>
 
-          <div className="hidden print:block mb-8 pb-4 border-b-2 border-slate-300">
-            <h1 className="text-2xl font-bold text-slate-900">Crop Insurance Claim Report</h1>
-            <p className="text-sm text-slate-500 mt-1">CropMind AI · Pre-Qualification Assessment · {meta.date}</p>
+        {/* ── Content container ────────────────────────────────────────────── */}
+        <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-5 print:max-w-none print:p-0 print:space-y-4">
+
+          {/* ── Field info + banner (full width) ──────────────────────────── */}
+          <div className={card}>
+            <Section icon={MapPin} title="Field Information">
+              <MetaGrid meta={meta} weather={weather} />
+            </Section>
           </div>
 
-          <div className="flex flex-col gap-8 print:gap-0">
+          <div className="relative rounded-2xl overflow-hidden print:rounded print:h-24"
+               style={{ height: 180, border: '1px solid var(--border-subtle)' }}>
+            <img src={demoFieldBanner} alt="Aerial field overview" className="w-full h-full object-cover print:opacity-60" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-transparent to-transparent pointer-events-none print:hidden" />
+            <div className="absolute bottom-4 left-5 print:hidden">
+              <p className="font-mono text-[8px] text-emerald-400 tracking-widest mb-1">FIELD UNIT 004 · CHAMPAIGN COUNTY, IL</p>
+              <p className="text-lg font-bold text-white leading-tight">~149 Acres · Pre-Qualification Survey</p>
+              <p className="font-mono text-[8px] text-zinc-400 mt-1">3 PARCELS · 5 SCOUTING POINTS · {meta.date}</p>
+            </div>
+          </div>
 
-            {/* 1 — Field Info */}
-            <div className={cardDark}>
-              <Section icon={MapPin} title="Field Information">
-                <MetaGrid meta={meta} weather={weather} />
+          {/* ── Row 1: Executive Summary (col-span-2) + Weather (col-span-1) ─ */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 print:gap-4">
+
+            {/* Executive Summary — spans 2 cols */}
+            <div className={`${card} md:col-span-2`}>
+              <Section icon={Bot} title="Executive Summary">
+                <div className="rounded-[10px] p-4 bg-[var(--bg-elevated)] print:bg-gray-50 print:rounded print:border print:border-gray-200">
+                  <p className="text-[13px] leading-relaxed text-zinc-300 print:text-zinc-800">{agentFindings}</p>
+                </div>
+                {appData?.synthesis?.overall_confidence != null && (
+                  <div className="mt-3 flex items-center gap-3">
+                    <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 print:text-zinc-600">AI Confidence</span>
+                    <div className="flex-1 h-1 rounded-full bg-zinc-800 print:bg-gray-200 overflow-hidden">
+                      <div className="h-full rounded-full bg-emerald-500"
+                           style={{ width: `${appData.synthesis.overall_confidence * 100}%` }} />
+                    </div>
+                    <span className="font-mono text-[10px] text-emerald-400 print:text-emerald-800">
+                      {(appData.synthesis.overall_confidence * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                )}
               </Section>
             </div>
 
-            <hr className={divider} />
-
-            {/* 2 — Weather Event */}
-            <div className={cardDark}>
+            {/* Weather Event + Satellite radar — col-span-1 */}
+            <div className={card}>
               <Section icon={CloudLightning} title="Weather Event">
-                <div className="rounded-[8px] p-4 bg-[var(--bg-elevated)]">
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 shrink-0 rounded-full p-1.5" style={{ background: 'rgba(245,166,35,0.15)' }}>
-                      <CloudLightning size={14} style={{ color: 'var(--accent-amber)' }} />
-                    </div>
-                    <div>
-                      <p style={{ fontFamily: 'var(--font-sans)', fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>{weather.event}</p>
-                      <p className="mt-1" style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)' }}>Date of Loss: {weather.dateOfLoss}</p>
-                    </div>
-                  </div>
+                <div className="rounded-[8px] p-3 bg-[var(--bg-elevated)] print:bg-gray-50 print:rounded print:border print:border-gray-200">
+                  <p className="text-[13px] font-medium text-zinc-100 print:text-zinc-900">{weather.event}</p>
+                  <p className="font-mono text-[10px] text-zinc-500 print:text-zinc-600 mt-1">Date of Loss: {weather.dateOfLoss}</p>
                 </div>
-                {/* Satellite radar snapshot + precipitation readout */}
                 <SatelliteWeatherPanel satellite={satellite} />
               </Section>
             </div>
-
-            <hr className={divider} />
-
-            {/* 3 — Damage by Zone */}
-            <div className={cardDark}>
-              <Section icon={Layers} title="Damage by Zone">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {zones.map(z => <ZoneRow key={z.name} zone={z} />)}
-                </div>
-              </Section>
-            </div>
-
-            {/* 4 — Geotagged Evidence Gallery ────────────────────────────── */}
-            <GeotaggedGallery images={galleryImages} />
-
-            {/* 5 — Bento: Executive Summary + Satellite + Insurance summary */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-
-              {/* Executive Summary */}
-              <div className={cardDark}>
-                <Section icon={Bot} title="Executive Summary">
-                  <div className="rounded-[12px] p-4 bg-[var(--bg-elevated)]">
-                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', lineHeight: 1.75, color: 'var(--text-secondary)' }}>
-                      {agentFindings}
-                    </p>
-                  </div>
-                </Section>
-              </div>
-
-              {/* Satellite data */}
-              {satellite ? (
-                <div className={cardDark}>
-                  <Section icon={Satellite} title="Satellite Data">
-                    <div className="rounded-[12px] p-4 flex flex-col gap-3 bg-[var(--bg-elevated)]">
-                      {satellite.summary && (
-                        <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', lineHeight: 1.75, color: 'var(--text-secondary)' }}>{satellite.summary}</p>
-                      )}
-                      {satellite.total_precip_mm != null && (
-                        <div className="bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-[8px] p-3">
-                          <p style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>7-Day Precip</p>
-                          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '28px', fontWeight: 500, color: 'var(--accent-primary)', marginTop: '4px' }}>
-                            {satellite.total_precip_mm} <span style={{ fontSize: '14px' }}>mm</span>
-                          </p>
-                          <div className="flex items-end gap-1 mt-2 h-6">
-                            {[0.2, 0.4, 1.0, 0.6, 0.3].map((val, i) => (
-                              <div key={i} className="flex-1 rounded-sm" style={{ background: 'var(--accent-primary)', height: `${val * 100}%`, opacity: val === 1.0 ? 1 : 0.4 }} />
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)', marginTop: 'auto' }}>
-                        Source: {satellite.source ?? 'open-meteo'}
-                      </p>
-                    </div>
-                  </Section>
-                </div>
-              ) : (
-                <div className={cardDark}>
-                  <Section icon={Satellite} title="Satellite Data">
-                    <div className="rounded-[12px] p-4 bg-[var(--bg-card)] border border-[var(--border-subtle)] flex items-center justify-center">
-                      <p style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', color: 'var(--text-muted)' }}>No satellite data available.</p>
-                    </div>
-                  </Section>
-                </div>
-              )}
-
-              {/* Insurance quick-view (summary counts) */}
-              <div className={cardDark}>
-                <Section icon={BookOpen} title="Insurance Policy">
-                  {fcicPolicyMatches.length > 0 ? (
-                    <div className="flex flex-col gap-2">
-                      <div className="rounded-[8px] p-3 bg-[var(--bg-elevated)] flex items-center justify-between">
-                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', color: 'var(--text-muted)' }}>Matched sections</span>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 600, color: '#10b981' }}>{fcicPolicyMatches.length}</span>
-                      </div>
-                      <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                        {fcicPolicyMatches[0]?.policy}
-                      </p>
-                      <p style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                        {fcicPolicyMatches[0]?.text?.slice(0, 90)}…
-                      </p>
-                      <p style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#4ade80', marginTop: '4px' }}>↓ See full matches below</p>
-                    </div>
-                  ) : (
-                    <div className="h-full border border-dashed border-[var(--border-subtle)] rounded-[12px] flex flex-col items-center justify-center p-6 bg-[var(--bg-card)]">
-                      <BookOpen size={20} style={{ color: 'var(--text-muted)', marginBottom: '8px' }} />
-                      <p style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', color: 'var(--text-muted)' }}>No policy linked</p>
-                    </div>
-                  )}
-                </Section>
-              </div>
-            </div>
-
-            {/* 6 — FCIC Policy Matches — full-width legal cards ────────────── */}
-            <FcicPolicyMatches matches={fcicPolicyMatches} />
-
-            {/* 7 — Action Items Checklist ──────────────────────────────────── */}
-            {actions.length > 0 && <ActionChecklist items={actions} />}
-
-            {/* ── Disclaimer ──────────────────────────────────────────────── */}
-            <div
-              className="rounded-[8px] p-[12px_16px] flex items-start gap-3 mt-4"
-              style={{ background: 'rgba(245,166,35,0.06)', borderLeft: '3px solid var(--accent-amber)' }}
-            >
-              <AlertTriangle size={14} style={{ color: 'var(--accent-amber)' }} className="shrink-0 mt-0.5" />
-              <p style={{ fontFamily: 'var(--font-sans)', color: 'var(--text-secondary)', fontSize: '12px', lineHeight: 1.5 }}>
-                <span className="font-semibold text-white">Disclaimer: </span>
-                Pre-qualification assessment, does not replace licensed adjuster.
-              </p>
-            </div>
-
           </div>
+
+          {/* ── Row 2: Damage by Zone (full width) ───────────────────────────── */}
+          <div className={card}>
+            <Section icon={Layers} title="Damage by Zone">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {zones.map(z => <ZoneRow key={z.name} zone={z} />)}
+              </div>
+            </Section>
+          </div>
+
+          {/* ── Row 3: Geotagged Evidence (col-span-2) + Precip (col-span-1) ── */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 print:gap-4">
+            <div className={`${card} md:col-span-2`}>
+              <GeotaggedGallery images={galleryImages} />
+            </div>
+            <div className={card}>
+              <PrecipChart satellite={satellite} />
+            </div>
+          </div>
+
+          {/* ── Row 4: FCIC Matches + Action Checklist (2-col) ───────────────── */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 print:gap-4">
+            <div className={card}>
+              <FcicPolicyMatches matches={fcicPolicyMatches} />
+            </div>
+            <div className={card}>
+              <ActionChecklist items={actions} />
+            </div>
+          </div>
+
+          {/* ── Disclaimer ───────────────────────────────────────────────────── */}
+          <div className="rounded-[8px] p-4 flex items-start gap-3 print:border print:border-amber-300 print:rounded"
+               style={{ background: 'rgba(245,166,35,0.06)', borderLeft: '3px solid #f59e0b' }}>
+            <AlertTriangle size={14} className="text-amber-400 print:text-amber-700 shrink-0 mt-0.5" />
+            <p className="text-[12px] leading-relaxed text-zinc-400 print:text-zinc-700">
+              <span className="font-semibold text-zinc-200 print:text-zinc-900">Disclaimer: </span>
+              Pre-qualification assessment only. Does not replace a licensed crop-insurance adjuster.
+              All indemnity determinations are subject to AIP review and FCIC standards.
+            </p>
+          </div>
+
         </div>
       </div>
     </>

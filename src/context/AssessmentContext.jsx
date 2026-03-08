@@ -29,12 +29,12 @@ function adaptBackendRow(row) {
       },
     },
     insurance: {
-      // insurance_matches stored in DB as a JSONB column by the pipeline
-      matched_sections:    row.insurance_matches ?? [],
-      yield_loss_estimate: row.yield_loss_estimate ?? 'Pending',
-      // action_items stored alongside insurance_matches
-      action_items:        row.action_items ?? [],
-      source: 'live',
+      // insurance_matches is a JSONB object: { matched_sections, action_items, deadlines, ... }
+      matched_sections:    row.insurance_matches?.matched_sections    ?? [],
+      action_items:        row.insurance_matches?.action_items        ?? [],
+      deadlines:           row.insurance_matches?.deadlines           ?? [],
+      yield_loss_estimate: row.insurance_matches?.yield_loss_estimate ?? row.yield_loss_estimate ?? 'Pending',
+      source:              row.insurance_matches?.source              ?? 'live',
     },
     flood_pathway: row.flood_pathway,
     satellite: row.satellite_data ?? null,

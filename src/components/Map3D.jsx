@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { X, Zap, BarChart2, Layers } from 'lucide-react'
-import FieldTopography3D, { DEFAULT_TOPO_POINTS } from './FieldTopography3D'
+import FieldTopography3D from './FieldTopography3D'
+import { DEFAULT_TOPO_POINTS } from '../data/topoDefaults'
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 

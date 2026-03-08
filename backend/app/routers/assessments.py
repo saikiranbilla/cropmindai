@@ -71,6 +71,15 @@ async def run_pipeline_bg(assessment_id: str, initial_state: FloodAssessmentStat
             "conflict_flags":    synthesis.get("conflict_flags", []),
             "zone_summaries":    spatial.get("zone_summaries"),
             "yield_loss_estimate": insurance.get("yield_loss_estimate"),
+            # Persist the full insurance agent output so the frontend can render
+            # matched policy sections and action items without falling back to stubs.
+            "insurance_matches": {
+                "matched_sections": insurance.get("matched_sections", []),
+                "action_items":     insurance.get("action_items", []),
+                "deadlines":        insurance.get("deadlines", []),
+                "yield_loss_estimate": insurance.get("yield_loss_estimate"),
+                "source":           insurance.get("source", "live"),
+            },
             "satellite_data":    final_state.get("satellite_data"),
             "pipeline_errors":   final_state.get("errors", []),
             "completed_at":      datetime.now(timezone.utc).isoformat(),

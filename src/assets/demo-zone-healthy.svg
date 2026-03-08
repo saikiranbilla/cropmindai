@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+  <!-- Clear sky -->
+  <rect width="800" height="180" fill="#0a1628"/>
+  <rect width="800" y="170" height="10" fill="#0f1e30" opacity="0.6"/>
+
+  <!-- Light clouds -->
+  <ellipse cx="150" cy="70"  rx="110" ry="38" fill="#1a2c44" opacity="0.7"/>
+  <ellipse cx="320" cy="55"  rx="90"  ry="30" fill="#1c3048" opacity="0.6"/>
+  <ellipse cx="560" cy="65"  rx="130" ry="42" fill="#1a2c44" opacity="0.7"/>
+  <ellipse cx="740" cy="50"  rx="80"  ry="28" fill="#1c3048" opacity="0.6"/>
+
+  <!-- Sun glow top-right -->
+  <ellipse cx="720" cy="30" rx="60" ry="40" fill="rgba(250,204,21,0.06)"/>
+
+  <!-- Ground baseline -->
+  <rect x="0" y="180" width="800" height="320" fill="#182210"/>
+
+  <!-- Healthy corn rows — perspective, converging at horizon center -->
+  <!-- Far rows (horizon) -->
+  <rect x="0" y="184" width="800" height="3"  fill="#2e4820" opacity="0.9"/>
+  <rect x="0" y="190" width="800" height="3"  fill="#2e4820" opacity="0.9"/>
+  <rect x="0" y="197" width="800" height="4"  fill="#324e22"/>
+  <rect x="0" y="204" width="800" height="4"  fill="#324e22"/>
+  <rect x="0" y="212" width="800" height="5"  fill="#365424"/>
+  <rect x="0" y="220" width="800" height="5"  fill="#365424"/>
+  <rect x="0" y="229" width="800" height="6"  fill="#3a5826"/>
+  <rect x="0" y="238" width="800" height="6"  fill="#3a5826"/>
+  <rect x="0" y="248" width="800" height="7"  fill="#3d5c28"/>
+  <rect x="0" y="258" width="800" height="8"  fill="#3d5c28"/>
+  <rect x="0" y="270" width="800" height="9"  fill="#406028"/>
+  <rect x="0" y="283" width="800" height="10" fill="#406028"/>
+  <rect x="0" y="298" width="800" height="11" fill="#436428"/>
+  <rect x="0" y="314" width="800" height="12" fill="#436428"/>
+  <rect x="0" y="332" width="800" height="13" fill="#466828"/>
+  <rect x="0" y="352" width="800" height="14" fill="#466828"/>
+  <rect x="0" y="374" width="800" height="16" fill="#486a28"/>
+  <rect x="0" y="398" width="800" height="18" fill="#486a28"/>
+  <rect x="0" y="428" width="800" height="20" fill="#4a6c28"/>
+  <rect x="0" y="462" width="800" height="38" fill="#4a6c28"/>
+
+  <!-- Corn stalks visible in near rows (vertical lines) -->
+  <g stroke="#5a8030" stroke-width="2" opacity="0.7">
+    <line x1="30"  y1="370" x2="30"  y2="335"/>
+    <line x1="100" y1="370" x2="100" y2="332"/>
+    <line x1="170" y1="370" x2="170" y2="330"/>
+    <line x1="240" y1="370" x2="240" y2="334"/>
+    <line x1="310" y1="370" x2="310" y2="330"/>
+    <line x1="380" y1="370" x2="380" y2="333"/>
+    <line x1="450" y1="370" x2="450" y2="330"/>
+    <line x1="520" y1="370" x2="520" y2="334"/>
+    <line x1="590" y1="370" x2="590" y2="332"/>
+    <line x1="660" y1="370" x2="660" y2="335"/>
+    <line x1="730" y1="370" x2="730" y2="330"/>
+    <line x1="790" y1="370" x2="790" y2="333"/>
+  </g>
+  <g stroke="#5a8030" stroke-width="3" opacity="0.6">
+    <line x1="55"  y1="428" x2="55"  y2="380"/>
+    <line x1="155" y1="428" x2="155" y2="376"/>
+    <line x1="255" y1="428" x2="255" y2="374"/>
+    <line x1="355" y1="428" x2="355" y2="378"/>
+    <line x1="455" y1="428" x2="455" y2="374"/>
+    <line x1="555" y1="428" x2="555" y2="376"/>
+    <line x1="655" y1="428" x2="655" y2="380"/>
+    <line x1="755" y1="428" x2="755" y2="374"/>
+  </g>
+
+  <!-- Corn leaves (V8-V10 stage) -->
+  <g fill="#4a7828" opacity="0.65">
+    <ellipse cx="30"  cy="318" rx="22" ry="5" transform="rotate(-30 30 318)"/>
+    <ellipse cx="30"  cy="325" rx="20" ry="4" transform="rotate(25 30 325)"/>
+    <ellipse cx="170" cy="315" rx="22" ry="5" transform="rotate(-28 170 315)"/>
+    <ellipse cx="310" cy="316" rx="22" ry="5" transform="rotate(-30 310 316)"/>
+    <ellipse cx="450" cy="315" rx="22" ry="5" transform="rotate(-30 450 315)"/>
+    <ellipse cx="590" cy="317" rx="22" ry="5" transform="rotate(-28 590 317)"/>
+    <ellipse cx="730" cy="316" rx="22" ry="5" transform="rotate(-30 730 316)"/>
+  </g>
+
+  <!-- Dry, well-drained soil between rows — brown -->
+  <g fill="rgba(80,48,16,0.35)">
+    <rect x="0" y="187" width="800" height="2"/>
+    <rect x="0" y="194" width="800" height="2"/>
+    <rect x="0" y="201" width="800" height="2"/>
+    <rect x="0" y="209" width="800" height="2"/>
+    <rect x="0" y="218" width="800" height="2"/>
+    <rect x="0" y="227" width="800" height="3"/>
+    <rect x="0" y="237" width="800" height="3"/>
+    <rect x="0" y="247" width="800" height="3"/>
+  </g>
+
+  <!-- Header HUD -->
+  <rect x="0" y="0" width="800" height="40" fill="rgba(0,0,0,0.80)"/>
+  <text x="12" y="16" fill="#4ade80" font-family="monospace" font-size="10" font-weight="bold">FIELD SCOUT · UNIT 004 — ZONE C (RIDGE) · DRY REFERENCE</text>
+  <text x="12" y="30" fill="#4ade80" font-family="monospace" font-size="8">LAT: 40.1130  LNG: -88.2370  ELEV: 222.0m ASL  2026-03-07 11:15</text>
+
+  <!-- Status badge top-right -->
+  <rect x="608" y="48" width="180" height="28" fill="rgba(34,197,94,0.15)" rx="4" style="stroke:rgba(34,197,94,0.4);stroke-width:1"/>
+  <text x="698" y="61"  fill="#22c55e" font-family="monospace" font-size="9"  font-weight="bold" text-anchor="middle">[ STATUS: NOMINAL ]</text>
+  <text x="698" y="71"  fill="#16a34a" font-family="monospace" font-size="7.5" text-anchor="middle">NO FLOOD DAMAGE DETECTED</text>
+
+  <!-- Bottom stats panel -->
+  <rect x="0" y="450" width="800" height="50" fill="rgba(0,0,0,0.78)"/>
+  <g font-family="monospace">
+    <text x="30"  y="468" fill="#94a3b8" font-size="8">STAND DENSITY</text>
+    <text x="30"  y="483" fill="#22c55e" font-size="18" font-weight="bold">98% <tspan font-size="10" fill="#4ade80">LIVE</tspan></text>
+
+    <text x="200" y="468" fill="#94a3b8" font-size="8">GROWTH STAGE</text>
+    <text x="200" y="483" fill="#22c55e" font-size="18" font-weight="bold">V8 <tspan font-size="10" fill="#4ade80">CORN</tspan></text>
+
+    <text x="370" y="468" fill="#94a3b8" font-size="8">SOIL MOISTURE</text>
+    <text x="370" y="483" fill="#22c55e" font-size="18" font-weight="bold">0.22 <tspan font-size="10" fill="#4ade80">m³/m³</tspan></text>
+
+    <text x="560" y="468" fill="#94a3b8" font-size="8">EST. YIELD IMPACT</text>
+    <text x="560" y="483" fill="#22c55e" font-size="18" font-weight="bold">&lt;3% <tspan font-size="10" fill="#4ade80">LOSS</tspan></text>
+  </g>
+</svg>
