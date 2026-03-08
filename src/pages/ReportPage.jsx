@@ -17,7 +17,7 @@ export default function ReportPage() {
           >
             <button
               onClick={() => setShowClaim(false)}
-              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 transition-colors"
+              className="flex items-center gap-1.5 min-h-[44px] text-xs text-slate-400 hover:text-slate-200 transition-colors duration-150"
             >
               <ArrowLeft size={14} />
               Back to Dashboard

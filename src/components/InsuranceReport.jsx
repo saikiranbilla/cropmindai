@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   AlertTriangle, CheckCircle, Clock, CloudLightning, TrendingDown,
   BookOpen, ChevronDown, ChevronUp, Square, CheckSquare,
@@ -193,17 +193,45 @@ function ActionItem({ item, onToggle }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function InsuranceReport() {
-  const { demoMode, scenario } = useDemo()
+  const { demoMode, scenario, appData } = useDemo()
 
   const claimId     = 'CLM-2026-0314'
   const status      = 'Pre-Qualification'
   const lastUpdated = `${scenario.weatherEvent.dateOfLoss} · Field Unit 004`
 
-  const damageSummary = demoMode ? buildDamageSummary(scenario.scoutingPoints) : []
-  const fcicMatches   = demoMode ? buildFcicMatches(scenario.insuranceMatches)  : []
-  const actions       = demoMode ? buildActions(scenario.actionItems)           : []
+  // Use live pipeline data when available, fall back to demo scenario
+  const liveInsurance = appData?.insurance
+  const sourcePoints  = appData?.spatial?.data?.enrichedPoints ?? scenario.scoutingPoints
+
+  const damageSummary = buildDamageSummary(sourcePoints)
+
+  const fcicMatches = liveInsurance?.matched_sections
+    ? liveInsurance.matched_sections.map((m, i) => ({
+        code:   m.reference,
+        section: '',
+        title:  m.reference,
+        status: 'Triggered',
+        detail: m.explanation,
+      }))
+    : buildFcicMatches(scenario.insuranceMatches)
+
+  const actions = liveInsurance
+    ? [
+        ...(liveInsurance.deadlines ?? []).map((d, i) => ({
+          id: i + 1, text: d, deadline: 'Urgent', urgency: 'critical',
+        })),
+        ...(liveInsurance.action_items ?? []).map((a, i) => ({
+          id: (liveInsurance.deadlines?.length ?? 0) + i + 1, text: a, deadline: 'See report', urgency: 'high',
+        })),
+      ]
+    : buildActions(scenario.actionItems)
 
   const [checklist, setChecklist] = useState(() => actions.map(a => ({ ...a, done: false })))
+
+  // Re-initialize checklist when live pipeline data arrives
+  useEffect(() => {
+    setChecklist(actions.map(a => ({ ...a, done: false })))
+  }, [liveInsurance]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const completedCount = checklist.filter(a => a.done).length
 
@@ -244,7 +272,7 @@ export default function InsuranceReport() {
       </div>
 
       {/* ── Body ────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-5 px-4 pt-4 pb-6">
+      <div className="flex flex-col gap-5 px-4 pt-4 pb-36">
 
         {/* Damage Summary Cards */}
         <section>

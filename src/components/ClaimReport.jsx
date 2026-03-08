@@ -136,10 +136,41 @@ function BulletList({ items, icon: Icon, iconClass }) {
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export default function ClaimReport() {
-  const { demoMode, scenario } = useDemo()
-  const { meta, weather, agentFindings, zones, fcicMatches, actions } = buildReportData(
-    demoMode ? scenario : scenario // always use scenario; swap source here when live data lands
-  )
+  const { demoMode, scenario, appData } = useDemo()
+
+  // Build base report from scenario, then overlay live data where available
+  const base = buildReportData(scenario)
+
+  const meta    = base.meta
+  const weather = base.weather
+
+  // Use live synthesis executive summary when available
+  const agentFindings = appData?.synthesis?.executive_summary ?? base.agentFindings
+
+  // Derive zones from enriched spatial points when available
+  const sourcePoints = appData?.spatial?.data?.enrichedPoints
+  const zones = sourcePoints
+    ? (() => {
+        const groups = {}
+        sourcePoints.forEach(pt => {
+          const key = pt.assignedZone ?? (pt.zone ? `Zone ${pt.zone}` : 'Unknown')
+          if (!groups[key]) groups[key] = []
+          groups[key].push(pt)
+        })
+        return Object.entries(groups).map(([name, pts]) => {
+          const topSev = pts.some(p => p.severity === 'high') ? 'Severe'
+                       : pts.some(p => p.severity === 'moderate') ? 'Moderate' : 'Low'
+          return { name, damage: topSev, type: pts[0].damageType ?? '—', estLoss: topSev === 'Severe' ? '~45%' : topSev === 'Moderate' ? '~11%' : '~3%' }
+        })
+      })()
+    : base.zones
+
+  // Use live insurance matches + actions when available
+  const fcicMatches = appData?.insurance?.matched_sections
+    ? appData.insurance.matched_sections.map(m => `${m.reference}: ${m.explanation.slice(0, 80)}…`)
+    : base.fcicMatches
+
+  const actions = appData?.insurance?.action_items ?? base.actions
 
   return (
     <>
@@ -151,7 +182,7 @@ export default function ClaimReport() {
         }
       `}</style>
 
-      <div className="min-h-full pb-32 print:pb-0" style={{ background: '#0a0e17' }}>
+      <div className="min-h-full pb-36 print:pb-0" style={{ background: '#0a0e17' }}>
 
         {/* ── Action bar (hidden on print) ────────────────────────────────── */}
         <div

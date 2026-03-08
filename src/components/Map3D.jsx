@@ -76,11 +76,18 @@ function getPointColor(point, mode, bounds) {
 
 function PinSheet({ point, onClose }) {
   const sevColor  = SEVERITY_COLORS[point.severity] ?? '#60a5fa'
-  const zoneColor = ZONE_COLORS[point.zone]         ?? '#60a5fa'
+  // assignedZone (from spatial agent) takes priority over raw zone letter
+  const displayZone = point.assignedZone ?? (point.zone ? `Zone ${point.zone}` : '—')
+  const zoneColor   = ZONE_COLORS[point.zone] ?? '#60a5fa'
+  const elevDisplay = point.elevation_est
+    ? `${point.elevation_est}m (est.)`
+    : point.elevation
+      ? `${point.elevation}m`
+      : '—'
   const cells = [
-    { label: 'Severity',  value: point.severity ?? '—',                 color: sevColor },
-    { label: 'Elevation', value: point.elevation ? `${point.elevation}m` : '—' },
-    { label: 'Zone',      value: point.zone ? `Zone ${point.zone}` : '—', color: zoneColor },
+    { label: 'Severity',  value: point.severity  ?? '—', color: sevColor },
+    { label: 'Elevation', value: elevDisplay },
+    { label: 'Zone',      value: displayZone,             color: zoneColor },
     { label: 'Lat',       value: point.lat,   mono: true },
     { label: 'Lng',       value: point.lng,   mono: true },
     { label: 'Status',    value: point.status ?? 'Pending', color: '#f59e0b' },
@@ -118,7 +125,18 @@ function PinSheet({ point, onClose }) {
         </button>
       </div>
 
-      {/* AI summary */}
+      {/* Spatial agent reasoning (when enriched) */}
+      {point.reasoning && (
+        <div
+          className="mb-2 rounded-xl p-3"
+          style={{ background: '#0a0e17', border: '1px solid #1e2d4a' }}
+        >
+          <p className="text-[9px] font-bold text-green-400 uppercase tracking-widest mb-1">Spatial Analysis</p>
+          <p className="text-xs text-slate-200 leading-relaxed">{point.reasoning}</p>
+        </div>
+      )}
+
+      {/* AI summary / field notes */}
       {point.summary && (
         <div
           className="mb-3 rounded-xl p-3"

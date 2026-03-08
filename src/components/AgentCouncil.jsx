@@ -9,6 +9,7 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import { useDemo } from '../context/DemoContext'
+import { runAssessmentPipeline } from '../agents/orchestrator'
 
 /* ───────── agent definitions ───────── */
 const AGENTS = [
@@ -61,7 +62,7 @@ const CHAR_SPEED = 18 // ms per character
    ═══════════════════════════════════════ */
 export default function AgentCouncil() {
   const navigate = useNavigate()
-  const { demoMode, scenario } = useDemo()
+  const { demoMode, scenario, updateAssessmentData } = useDemo()
 
   const agentTextRef = useRef(
     demoMode ? scenario.agentOutputs : { vision: '', environmental: '', spatial: '', insurance: '', synthesis: '' }
@@ -76,6 +77,40 @@ export default function AgentCouncil() {
   const [allDone, setAllDone] = useState(false)
   const [showButton, setShowButton] = useState(false)
   const timerRefs = useRef({})
+
+  // Pipeline state — tracks the live orchestrator run
+  const pipelineResultRef = useRef(null)
+  const [pipelineDone, setPipelineDone] = useState(false)
+  const didReveal = useRef(false)
+
+  // Reveal results exactly once when BOTH animation AND pipeline are complete
+  const revealResults = useCallback(() => {
+    if (didReveal.current) return
+    didReveal.current = true
+    if (pipelineResultRef.current) {
+      updateAssessmentData(pipelineResultRef.current)
+    }
+    setTimeout(() => setShowButton(true), 400)
+  }, [updateAssessmentData])
+
+  // Fire the pipeline on mount — runs concurrently with the typewriter animation
+  useEffect(() => {
+    runAssessmentPipeline(scenario.scoutingPoints)
+      .then(result => {
+        console.log('FINAL UNIFIED PIPELINE OUTPUT:', JSON.stringify(result, null, 2))
+        pipelineResultRef.current = result
+        setPipelineDone(true)
+      })
+      .catch(err => {
+        console.error('🚨 Pipeline error in AgentCouncil:', err)
+        setPipelineDone(true) // don't block the UI on failure
+      })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Gate: reveal when both sides are done (either order)
+  useEffect(() => {
+    if (allDone && pipelineDone) revealResults()
+  }, [allDone, pipelineDone, revealResults])
 
   /* ── typewriter engine ── */
   const startStreaming = useCallback((agentId) => {
@@ -133,11 +168,10 @@ export default function AgentCouncil() {
         if (!streams[a.id].started) startStreaming(a.id)
       })
     }
-    // All done
+    // All done — reveal is gated on pipelineDone via the separate effect above
     const every = AGENTS.every((a) => streams[a.id].done)
     if (every && !allDone) {
       setAllDone(true)
-      setTimeout(() => setShowButton(true), 400)
     }
   }, [streams, startStreaming, allDone])
 
@@ -154,7 +188,7 @@ export default function AgentCouncil() {
 
   /* ── render ── */
   return (
-    <div className="flex flex-col gap-5 px-4 py-6 max-w-2xl mx-auto w-full">
+    <div className="flex flex-col gap-5 px-4 py-6 pb-28 max-w-2xl mx-auto w-full">
       {/* ───── header ───── */}
       <div className="flex items-center justify-between mb-1">
         <h2 className="text-lg font-semibold tracking-tight text-slate-100">

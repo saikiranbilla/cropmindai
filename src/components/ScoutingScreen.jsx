@@ -210,7 +210,7 @@ export default function ScoutingScreen() {
           <p className="text-[11px] text-slate-500">{scoutingData.length} points · Champaign Co., IL</p>
         </div>
         <button
-          className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-blue-400 transition-colors hover:text-blue-300"
+          className="flex items-center gap-1.5 min-h-[44px] rounded-xl px-3 py-2 text-xs font-semibold text-blue-400 transition-colors duration-150 hover:text-blue-300"
           style={{ background: '#0d1f3c', border: '1px solid #1e3a5f' }}
         >
           <Camera size={14} />
