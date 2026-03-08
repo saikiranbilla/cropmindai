@@ -53,8 +53,8 @@ Every year, catastrophic flooding destroys over **$2.4 billion** in U.S. row-cro
 4. **Synthesize** — A Synthesis Agent resolves inter-agent conflicts (e.g., Vision reports green plants but Environmental shows 72+ hours of submersion) and generates the final audit-ready JSON report with a deadline-driven action timeline.
 5. **Visualize** — A 3D Digital Twin renders the field terrain as a 33k-vertex mesh with flood pooling simulation, alongside an interactive insurance claim report.
 
-![3D Damage Dashboard](./docs/dashboard.png)
-<!-- 🔧 REPLACE: Add a screenshot of your 3D map + dashboard at ./docs/dashboard.png -->
+![3D Flood Simulation](./docs/3d-map-demo.gif)
+<!-- 🔧 REPLACE: Add your 3D map GIF at ./docs/3d-map-demo.gif -->
 
 ### Key Differentiators
 
