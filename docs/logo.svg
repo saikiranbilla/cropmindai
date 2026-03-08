@@ -122,9 +122,9 @@
     <line x1="150" y1="225" x2="250" y2="225" stroke="#14b8a6" stroke-width="1" stroke-dasharray="4,4"/>
   </g>
 
-  <!-- "CC" monogram (CropClaim) -->
+  <!-- "CM" monogram (CropMIND) -->
   <text x="200" y="155" text-anchor="middle" font-family="'Inter', 'SF Pro Display', -apple-system, sans-serif"
-        font-size="28" font-weight="700" letter-spacing="6" fill="#ffffff" opacity="0.9">CC</text>
+        font-size="28" font-weight="700" letter-spacing="6" fill="#ffffff" opacity="0.9">CM</text>
 
   <!-- "AI" badge -->
   <rect x="183" y="290" width="34" height="18" rx="9" fill="url(#shieldGrad)" opacity="0.9"/>

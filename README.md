@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="./docs/logo.svg" alt="CropClaim AI Logo" width="140" />
+  <img src="./docs/logo.svg" alt="CropMIND AI Logo" width="140" />
 </p>
 
-<h1 align="center">CropClaim AI</h1>
+<h1 align="center">CropMIND AI</h1>
 
 <p align="center">
   <strong>Autonomous Multi-Agent Flood Damage Assessment for Federal Crop Insurance</strong>
@@ -40,7 +40,7 @@ Every year, catastrophic flooding destroys over **$2.4 billion** in U.S. row-cro
 
 ## 2. Solution Overview
 
-**CropClaim AI** is an autonomous, multi-agent flood damage assessment platform that compresses the entire claim pre-qualification lifecycle — from field photo capture to audit-ready report — into a single, real-time pipeline.
+**CropMIND AI** is an autonomous, multi-agent flood damage assessment platform that compresses the entire claim pre-qualification lifecycle — from field photo capture to audit-ready report — into a single, real-time pipeline.
 
 ![Architecture Diagram](./docs/architecture.png)
 <!-- 🔧 REPLACE: Add your system architecture diagram at ./docs/architecture.png -->
@@ -68,7 +68,7 @@ Every year, catastrophic flooding destroys over **$2.4 billion** in U.S. row-cro
 
 ### 3.1 System Architecture
 
-CropClaim AI is a **decoupled, event-driven system** with three independently deployable layers:
+CropMIND AI is a **decoupled, event-driven system** with three independently deployable layers:
 
 | Layer | Stack | Deployment |
 |---|---|---|
@@ -427,5 +427,5 @@ The frontend runs at **http://localhost:5173** and the API docs are available at
 <p align="center">
   <strong>Built for the Precision Digital Agriculture Hackathon 2026 — GenAI Track</strong>
   <br />
-  <sub>CropClaim AI · CropMIND</sub>
+  <sub>CropMIND AI</sub>
 </p>
