@@ -1,26 +1,60 @@
 import { useState, useCallback } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { DemoProvider, useDemo } from './context/DemoContext'
+import { AssessmentProvider, useAssessment } from './context/AssessmentContext'
 import BottomNav from './components/BottomNav'
 import SplashScreen from './components/SplashScreen'
+import Map3D from './components/Map3D'
 import ScoutPage from './pages/ScoutPage'
 import AgentsPage from './pages/AgentsPage'
-import MapPage from './pages/MapPage'
 import ReportPage from './pages/ReportPage'
-import ApiTestPage from './pages/ApiTestPage'
+
+// ─── Debug pill (dev only) ────────────────────────────────────────────────────
 
 function DebugPill() {
-  const { appData } = useDemo()
+  const { status, assessmentId, assessmentData } = useAssessment()
+  if (import.meta.env.PROD) return null
   return (
     <div className="fixed top-0 right-0 m-2 z-50 bg-black/80 text-xs text-green-400 p-2 rounded pointer-events-none flex flex-col gap-1">
-      <div>Source: {appData?.synthesis?.source || 'mock'}</div>
-      <div>Zones: {appData?.spatial?.data?.enrichedPoints?.length > 0 ? 'Enriched' : 'Static'}</div>
-      <div>Conflicts: {appData?.synthesis?.conflict_flags?.length || 0}</div>
+      <div>Status: {status}</div>
+      <div>ID: {assessmentId ? assessmentId.slice(0, 8) + '…' : 'none'}</div>
+      <div>Confidence: {assessmentData?.synthesis?.overall_confidence ?? '—'}</div>
     </div>
   )
 }
 
-// Applies page-enter animation on every route change
+// ─── Persistent Map3D layer ───────────────────────────────────────────────────
+// Lives OUTSIDE <Routes> so Three.js never unmounts on navigation.
+// Toggled with display:none / display:block — saves the ~300ms reinit cost
+// and avoids GPU memory churn on every visit to /map.
+
+function PersistentMap() {
+  const location = useLocation()
+  const { appData, scenario } = useAssessment()
+  const isMapRoute = location.pathname === '/map'
+
+  const activePoints =
+    appData?.spatial?.data?.enrichedPoints ??
+    scenario.scoutingPoints
+
+  return (
+    <div
+      style={{
+        display: isMapRoute ? 'block' : 'none',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: '5rem',   // above bottom nav (pb-20 = 5rem)
+        zIndex: 10,
+      }}
+    >
+      <Map3D scoutingPoints={activePoints} viewMode="damage" />
+    </div>
+  )
+}
+
+// ─── Routes with page-enter animation ────────────────────────────────────────
+
 function AnimatedRoutes() {
   const location = useLocation()
   return (
@@ -29,31 +63,32 @@ function AnimatedRoutes() {
         <Route path="/" element={<Navigate to="/scout" replace />} />
         <Route path="/scout" element={<ScoutPage />} />
         <Route path="/agents" element={<AgentsPage />} />
-        <Route path="/map" element={<MapPage />} />
+        <Route path="/map" element={<div />} />  {/* Map is rendered by PersistentMap */}
         <Route path="/report" element={<ReportPage />} />
-        <Route path="/test-api" element={<ApiTestPage />} />
       </Routes>
     </main>
   )
 }
+
+// ─── Root ─────────────────────────────────────────────────────────────────────
 
 export default function App() {
   const [splashDone, setSplashDone] = useState(false)
   const handleSplashComplete = useCallback(() => setSplashDone(true), [])
 
   return (
-    <DemoProvider>
+    <AssessmentProvider>
       {!splashDone && <SplashScreen onComplete={handleSplashComplete} />}
       <BrowserRouter>
         <div
-          className="flex flex-col min-h-screen relative overflow-x-hidden"
-          style={{ background: '#0a0e17', color: '#e2e8f0' }}
+          className="flex flex-col min-h-screen relative overflow-x-hidden bg-zinc-950 text-zinc-400"
         >
           <DebugPill />
+          <PersistentMap />
           <AnimatedRoutes />
           <BottomNav />
         </div>
       </BrowserRouter>
-    </DemoProvider>
+    </AssessmentProvider>
   )
 }

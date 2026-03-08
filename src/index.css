@@ -1,16 +1,48 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --font-sans: 'DM Sans', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+  --bg-base: #080c10;
+  --bg-surface: #0e1419;
+  --bg-elevated: #151d26;
+  --bg-card: #111820;
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-strong: rgba(255, 255, 255, 0.12);
+  --accent-primary: #00e5a0;
+  --accent-blue: #3b9eff;
+  --accent-amber: #f5a623;
+  --accent-red: #ff4d4d;
+  --accent-purple: #a78bfa;
+  --text-primary: #f0f4f8;
+  --text-secondary: #8fa3b8;
+  --text-muted: #4a6070;
+
+  font-family: var(--font-sans);
   line-height: 1.5;
   font-weight: 400;
   color-scheme: dark;
-  color: #e2e8f0;
-  background-color: #0a0e17;
+  color: var(--text-primary);
+  background-color: var(--bg-base);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+::-webkit-scrollbar {
+  width: 3px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--accent-primary);
+  border-radius: 2px;
+  opacity: 0.5;
 }
 
 * {
@@ -23,7 +55,7 @@
 
 html,
 body {
-  background-color: #0a0e17;
+  background-color: var(--bg-base);
   min-height: 100vh;
   min-height: 100dvh;
   /* Prevent pull-to-refresh and rubber-band bounce */
@@ -40,20 +72,63 @@ body {
 
 /* Route page fade-in */
 @keyframes pageFadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .page-enter {
-  animation: pageFadeIn 0.2s ease-out both;
+  animation: pageFadeIn 0.15s ease-out both;
 }
 
 /* Splash pulse ring */
 @keyframes splashPulse {
-  0%, 100% { opacity: 0.6; transform: scale(1); }
-  50%       { opacity: 0;   transform: scale(1.6); }
+
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0;
+    transform: scale(1.6);
+  }
 }
 
 .splash-ring {
   animation: splashPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes scanLine {
+  0% {
+    transform: translateY(-100%);
+  }
+
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+.animate-scan {
+  animation: scanLine 4s linear infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+  animation: shimmer 1.5s infinite;
 }

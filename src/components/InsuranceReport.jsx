@@ -3,7 +3,7 @@ import {
   AlertTriangle, CheckCircle, Clock, CloudLightning, TrendingDown,
   BookOpen, ChevronDown, ChevronUp, Square, CheckSquare,
 } from 'lucide-react'
-import { useDemo } from '../context/DemoContext'
+import { useDemo } from '../context/AssessmentContext'
 
 // ─── Scenario → Dashboard shape adapters ─────────────────────────────────────
 
@@ -15,16 +15,16 @@ function buildDamageSummary(scoutingPoints) {
   })
   const ZONE_LABELS = { A: 'Zone A — Ridge', B: 'Zone B — Depression' }
   return Object.entries(groups).map(([zone, pts]) => {
-    const topSev  = pts.some(p => p.severity === 'high')   ? 'Severe'
-                  : pts.some(p => p.severity === 'medium') ? 'Moderate' : 'Low'
+    const topSev = pts.some(p => p.severity === 'high') ? 'Severe'
+      : pts.some(p => p.severity === 'medium') ? 'Moderate' : 'Low'
     const estLoss = topSev === 'Severe' ? '~45%' : topSev === 'Moderate' ? '~11%' : '~3%'
     return {
-      zone:     ZONE_LABELS[zone] ?? `Zone ${zone}`,
+      zone: ZONE_LABELS[zone] ?? `Zone ${zone}`,
       severity: topSev,
-      type:     pts[0].damageType,
+      type: pts[0].damageType,
       estLoss,
-      points:   pts.length,
-      notes:    `${pts.length} scouting points. Primary damage: ${pts[0].damageType}. Highest severity: ${topSev}.`,
+      points: pts.length,
+      notes: `${pts.length} scouting points. Primary damage: ${pts[0].damageType}. Highest severity: ${topSev}.`,
     }
   })
 }
@@ -32,51 +32,97 @@ function buildDamageSummary(scoutingPoints) {
 function buildFcicMatches(insuranceMatches) {
   const relevanceToStatus = { Critical: 'Triggered', High: 'Triggered', Medium: 'Potential', Low: 'Clear' }
   return insuranceMatches.map(m => ({
-    code:    m.reference,
+    code: m.reference,
     section: m.relevance,
-    title:   m.title,
-    status:  relevanceToStatus[m.relevance] ?? 'Potential',
-    detail:  m.explanation,
+    title: m.title,
+    status: relevanceToStatus[m.relevance] ?? 'Potential',
+    detail: m.explanation,
   }))
 }
 
 function buildActions(actionItems) {
   return actionItems.map((a, i) => ({
-    id:       i + 1,
-    text:     a.text,
+    id: i + 1,
+    text: a.text,
     deadline: a.urgent ? 'Within 72 hrs' : 'Ongoing',
-    urgency:  a.urgent ? 'critical' : 'medium',
+    urgency: a.urgent ? 'critical' : 'medium',
   }))
 }
+
+// ─── Demo FCIC matches (shown when no live pipeline data is available) ─────────
+const DEMO_FCIC_MATCHES = [
+  {
+    code:   '457.8(b)(1)',
+    section: 'Prevented Planting — Flood',
+    title:  'Prevented Planting — Flood',
+    status: 'Triggered',
+    detail: 'An indemnity is owed when the insured is prevented from planting the insured crop on acreage by the final planting date due to an insured cause of loss — including excess moisture or flooding — that is general in the area. The insured must provide evidence that other producers in the area were also prevented from planting.',
+  },
+  {
+    code:   '457.8(b)(3)',
+    section: 'Stand Loss — Pre-V6 Corn',
+    title:  'Stand Loss — Pre-V6 Corn',
+    status: 'Potential',
+    detail: 'For corn at or below the V6 growth stage, the growing point remains below the soil surface and the plant may recover from short-duration submersion. A stand-count inspection by an approved loss adjuster is required before any replanting indemnity is approved. Premature termination of the insured crop without consent forfeits coverage.',
+  },
+  {
+    code:   '457.8(c)(2)',
+    section: 'Replant — Notice Requirement',
+    title:  'Replant — Notice Requirement',
+    status: 'Potential',
+    detail: 'The insured must notify the insurance company within 72 hours of discovering damage that may result in a replanting. The company must have the opportunity to inspect the damaged crop before any replanting occurs. Failure to provide timely notice may result in denial of the replanting payment.',
+  },
+]
+
+const DEMO_ACTIONS = [
+  { id: 1, text: 'File Notice of Loss with your AIP within 72 hours of damage discovery (FCIC §457.8 requirement).', deadline: 'Within 72 hrs', urgency: 'critical' },
+  { id: 2, text: 'Do not replant or terminate the insured crop before the adjuster completes a stand-count inspection.', deadline: 'Before replanting', urgency: 'critical' },
+  { id: 3, text: 'Document GPS-tagged photos of standing water, silt lines, and plant necrosis at each scouting point.', deadline: 'Ongoing', urgency: 'high' },
+  { id: 4, text: 'Contact your FSA office to verify APH (Actual Production History) yield records for the affected unit.', deadline: 'Within 1 week', urgency: 'medium' },
+]
 
 // ─── Style maps ───────────────────────────────────────────────────────────────
 
 const SEVERITY = {
-  Severe:   { badge: 'bg-red-500/15 text-red-400 border-red-500/30',          bar: 'bg-red-500',    pct: 80 },
-  Moderate: { badge: 'bg-yellow-400/15 text-yellow-300 border-yellow-400/30', bar: 'bg-yellow-400', pct: 45 },
-  Low:      { badge: 'bg-green-500/15 text-green-400 border-green-500/30',    bar: 'bg-green-500',  pct: 15 },
+  Severe: {
+    textColor: 'var(--accent-red)', badgeBg: 'rgba(255,77,77,0.12)', badgeBorder: 'rgba(255,77,77,0.25)',
+    cardBg: 'rgba(255,77,77,0.05)', cardBorder: 'rgba(255,77,77,0.25)', bar: 'var(--accent-red)', pct: 80
+  },
+  Moderate: {
+    textColor: 'var(--accent-amber)', badgeBg: 'rgba(245,166,35,0.12)', badgeBorder: 'rgba(245,166,35,0.25)',
+    cardBg: 'rgba(245,166,35,0.05)', cardBorder: 'rgba(245,166,35,0.25)', bar: 'var(--accent-amber)', pct: 45
+  },
+  Low: {
+    textColor: 'var(--accent-primary)', badgeBg: 'rgba(0,229,160,0.10)', badgeBorder: 'rgba(0,229,160,0.20)',
+    cardBg: 'rgba(0,229,160,0.05)', cardBorder: 'rgba(0,229,160,0.20)', bar: 'var(--accent-primary)', pct: 15
+  },
 }
 
 const FCIC_STATUS = {
-  Triggered: { pill: 'bg-red-500/15 text-red-400 border-red-500/30',          dot: 'bg-red-400' },
+  Triggered: { pill: 'bg-red-500/15 text-red-400 border-red-500/30', dot: 'bg-red-400' },
   Potential: { pill: 'bg-yellow-400/15 text-yellow-300 border-yellow-400/30', dot: 'bg-yellow-400 animate-pulse' },
-  Clear:     { pill: 'bg-green-500/15 text-green-400 border-green-500/30',    dot: 'bg-green-400' },
+  Clear: { pill: 'bg-green-500/15 text-green-400 border-green-500/30', dot: 'bg-green-400' },
 }
 
 const URGENCY = {
-  critical: { label: 'Urgent',  textColor: 'text-red-400',    bg: 'bg-red-500/10 border border-red-500/20',       icon: 'text-red-400'    },
-  high:     { label: 'High',    textColor: 'text-orange-400', bg: 'bg-orange-500/10 border border-orange-500/20', icon: 'text-orange-400' },
-  medium:   { label: 'Medium',  textColor: 'text-yellow-400', bg: 'bg-yellow-400/10 border border-yellow-400/20', icon: 'text-yellow-300' },
+  critical: { label: 'Urgent', textColor: 'text-red-400', bg: 'bg-red-500/10 border border-red-500/20', icon: 'text-red-400' },
+  high: { label: 'High', textColor: 'text-orange-400', bg: 'bg-orange-500/10 border border-orange-500/20', icon: 'text-orange-400' },
+  medium: { label: 'Medium', textColor: 'text-yellow-400', bg: 'bg-yellow-400/10 border border-yellow-400/20', icon: 'text-yellow-300' },
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function SectionHeader({ icon: Icon, title, meta }) {
   return (
-    <div className="flex items-center gap-2 mb-3">
-      <Icon size={13} className="text-slate-400 shrink-0" />
-      <h2 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{title}</h2>
-      {meta && <span className="ml-auto text-[10px] text-slate-600 font-mono">{meta}</span>}
+    <div className="flex items-center gap-3 mb-4 mt-2">
+      <div className="flex items-center gap-2 shrink-0">
+        <Icon size={14} style={{ color: 'var(--text-muted)' }} />
+        <h2 className="uppercase" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 500, letterSpacing: '0.1em', color: 'var(--text-muted)' }}>
+          {title}
+        </h2>
+      </div>
+      <div className="flex-1 h-px bg-[var(--border-subtle)]" />
+      {meta && <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-muted)' }}>{meta}</span>}
     </div>
   )
 }
@@ -86,72 +132,91 @@ function DamageCard({ zone }) {
   const s = SEVERITY[zone.severity] ?? SEVERITY.Low
 
   return (
-    <div className="rounded-xl overflow-hidden" style={{ background: '#111827', border: '1px solid #1e2d4a' }}>
-      <div className={`h-0.5 ${s.bar}`} />
-      <div className="p-3.5">
-        <div className="flex items-start justify-between mb-2">
-          <div>
-            <p className="text-sm font-bold text-slate-100">{zone.zone}</p>
-            <p className="text-[11px] text-slate-500 mt-0.5">{zone.type} · {zone.points} scout pts</p>
-          </div>
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${s.badge}`}>
-            {zone.severity}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2 mb-2.5">
-          <TrendingDown size={11} className="text-slate-500 shrink-0" />
-          <span className="text-xs text-slate-400">Est. Yield Loss</span>
-          <span className="ml-auto font-mono text-sm font-bold text-slate-100">{zone.estLoss}</span>
-        </div>
-
-        <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden mb-3">
-          <div className={`h-full rounded-full ${s.bar}`} style={{ width: `${s.pct}%` }} />
-        </div>
-
-        <button
-          onClick={() => setExpanded(v => !v)}
-          className="flex items-center gap-1 text-[10px] text-slate-500 hover:text-slate-300 transition-colors"
-        >
-          {expanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
-          {expanded ? 'Hide notes' : 'Field notes'}
-        </button>
-        {expanded && (
-          <p className="mt-2 pt-2 text-xs text-slate-300 leading-relaxed border-t border-slate-800">
-            {zone.notes}
+    <div
+      className="rounded-[12px] p-[20px] transition-all duration-300 relative"
+      style={{ background: s.cardBg, border: `1px solid ${s.cardBorder}` }}
+    >
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <p className="text-[16px] font-[600]" style={{ fontFamily: 'var(--font-sans)', color: 'var(--text-primary)' }}>{zone.zone}</p>
+          <p className="mt-1" style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--text-secondary)' }}>
+            {zone.type} <span className="mx-2" style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)' }}>{zone.points} scout pts</span>
           </p>
-        )}
+        </div>
+        <span
+          className="uppercase px-2.5 py-0.5 rounded-full"
+          style={{
+            fontFamily: 'var(--font-sans)', fontSize: '10px', fontWeight: 500, letterSpacing: '0.08em',
+            background: s.badgeBg, color: s.textColor, border: `1px solid ${s.badgeBorder}`
+          }}
+        >
+          {zone.severity}
+        </span>
       </div>
+
+      <div className="mb-4">
+        <div className="flex justify-between items-end mb-2">
+          <span className="uppercase" style={{ fontFamily: 'var(--font-sans)', color: 'var(--text-muted)', fontSize: '11px', letterSpacing: '0.08em' }}>Est. Yield Loss</span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 500, fontSize: '30px', color: s.textColor, lineHeight: 1 }}>{zone.estLoss}</span>
+        </div>
+        <div className="h-2 rounded-md bg-[var(--bg-elevated)] overflow-hidden">
+          <div className="h-full rounded-md" style={{ width: `${s.pct}%`, background: s.bar, boxShadow: `0 0 8px ${s.bar}80` }} />
+        </div>
+      </div>
+
+      <button
+        onClick={() => setExpanded(v => !v)}
+        className="flex items-center gap-1 text-[11px] transition-colors hover:opacity-80"
+        style={{ fontFamily: 'var(--font-sans)', color: 'var(--text-muted)' }}
+      >
+        {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+        {expanded ? 'Hide notes' : 'Field notes'}
+      </button>
+      {expanded && (
+        <p className="mt-3 pt-3 text-[13px] leading-relaxed" style={{ color: 'var(--text-secondary)', borderTop: '1px solid var(--border-subtle)', fontFamily: 'var(--font-sans)' }}>
+          {zone.notes}
+        </p>
+      )}
     </div>
   )
 }
 
 function FcicCard({ match }) {
-  const [expanded, setExpanded] = useState(false)
   const s = FCIC_STATUS[match.status] ?? FCIC_STATUS.Clear
 
   return (
-    <div className="rounded-xl p-3.5" style={{ background: '#111827', border: '1px solid #1e2d4a' }}>
-      <div className="flex items-start justify-between gap-2 mb-1.5">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="font-mono text-[11px] font-bold text-blue-400 shrink-0">{match.code}</span>
-          <span className="text-[10px] text-slate-600 truncate">{match.section}</span>
+    <div
+      className="rounded-[12px] p-[16px] transition-all duration-300"
+      style={{ background: 'var(--bg-card)', borderLeft: '3px solid #10b981', border: '1px solid var(--border-subtle)', borderLeftWidth: '3px', borderLeftColor: '#10b981' }}
+    >
+      {/* Header row: reference code + status pill */}
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="flex items-center gap-2 min-w-0 flex-wrap">
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 700, color: '#10b981' }}>
+            {match.code}
+          </span>
+          {match.section && (
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'rgba(16,185,129,0.55)' }}>
+              {match.section}
+            </span>
+          )}
         </div>
         <span className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${s.pill}`}>
           <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
           {match.status}
         </span>
       </div>
-      <p className="text-xs font-semibold text-slate-200 mb-2">{match.title}</p>
-      <button
-        onClick={() => setExpanded(v => !v)}
-        className="flex items-center gap-1 text-[10px] text-slate-500 hover:text-slate-300 transition-colors"
-      >
-        {expanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
-        {expanded ? 'Collapse' : 'View policy detail'}
-      </button>
-      {expanded && (
-        <p className="mt-2 pt-2 text-xs text-slate-300 leading-relaxed border-t border-slate-800">
+
+      {/* Title (when different from code) */}
+      {match.title && match.title !== match.code && (
+        <p className="mb-2" style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, color: '#34d399' }}>
+          {match.title}
+        </p>
+      )}
+
+      {/* Policy text — always visible, no accordion */}
+      {match.detail && (
+        <p style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', lineHeight: 1.7, color: '#f4f4f5' }}>
           {match.detail}
         </p>
       )}
@@ -195,36 +260,59 @@ function ActionItem({ item, onToggle }) {
 export default function InsuranceReport() {
   const { demoMode, scenario, appData } = useDemo()
 
-  const claimId     = 'CLM-2026-0314'
-  const status      = 'Pre-Qualification'
+  const claimId = 'CLM-2026-0314'
+  const status = 'Pre-Qualification'
   const lastUpdated = `${scenario.weatherEvent.dateOfLoss} · Field Unit 004`
 
   // Use live pipeline data when available, fall back to demo scenario
   const liveInsurance = appData?.insurance
-  const sourcePoints  = appData?.spatial?.data?.enrichedPoints ?? scenario.scoutingPoints
+  const sourcePoints = appData?.spatial?.data?.enrichedPoints ?? scenario.scoutingPoints
 
   const damageSummary = buildDamageSummary(sourcePoints)
 
-  const fcicMatches = liveInsurance?.matched_sections
-    ? liveInsurance.matched_sections.map((m, i) => ({
-        code:   m.reference,
-        section: '',
-        title:  m.reference,
-        status: 'Triggered',
-        detail: m.explanation,
-      }))
-    : buildFcicMatches(scenario.insuranceMatches)
+  // Always start with demo data; only replace when live arrays are non-empty
+  let fcicMatches = DEMO_FCIC_MATCHES
 
-  const actions = liveInsurance
-    ? [
-        ...(liveInsurance.deadlines ?? []).map((d, i) => ({
-          id: i + 1, text: d, deadline: 'Urgent', urgency: 'critical',
-        })),
-        ...(liveInsurance.action_items ?? []).map((a, i) => ({
-          id: (liveInsurance.deadlines?.length ?? 0) + i + 1, text: a, deadline: 'See report', urgency: 'high',
-        })),
-      ]
-    : buildActions(scenario.actionItems)
+  const liveSections = Array.isArray(liveInsurance?.matched_sections)
+    ? liveInsurance.matched_sections.filter(m => m.reference || m.explanation)
+    : []
+  const rawMatches = Array.isArray(appData?._raw?.insurance_matches)
+    ? appData._raw.insurance_matches.filter(m => m.policy || m.text)
+    : []
+
+  if (liveSections.length) {
+    fcicMatches = liveSections.map(m => ({
+      code:    m.reference   ?? 'FCIC',
+      section: m.title       ?? '',
+      title:   m.reference   ?? '',
+      status:  'Triggered',
+      detail:  m.explanation ?? '',
+    }))
+  } else if (rawMatches.length) {
+    fcicMatches = rawMatches.map(m => ({
+      code:    m.policy   ?? 'FCIC',
+      section: m.section  ?? '',
+      title:   m.policy   ?? '',
+      status:  'Triggered',
+      detail:  m.text     ?? '',
+    }))
+  }
+
+  // Same pattern for actions: demo by default, override only when live has content
+  let actions = DEMO_ACTIONS
+
+  const liveActionItems = [
+    ...(Array.isArray(liveInsurance?.deadlines)    ? liveInsurance.deadlines    : []),
+    ...(Array.isArray(liveInsurance?.action_items) ? liveInsurance.action_items : []),
+  ]
+  if (liveActionItems.length) {
+    actions = liveActionItems.map((text, i) => ({
+      id:       i + 1,
+      text:     typeof text === 'string' ? text : String(text),
+      deadline: i < (liveInsurance?.deadlines?.length ?? 0) ? 'Urgent' : 'See report',
+      urgency:  i < (liveInsurance?.deadlines?.length ?? 0) ? 'critical' : 'high',
+    }))
+  }
 
   const [checklist, setChecklist] = useState(() => actions.map(a => ({ ...a, done: false })))
 
@@ -240,7 +328,7 @@ export default function InsuranceReport() {
   }
 
   return (
-    <div className="flex flex-col min-h-full" style={{ background: '#0a0e17' }}>
+    <div className="flex flex-col min-h-full bg-[var(--bg-base)] text-[var(--text-primary)]">
 
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <div
@@ -249,8 +337,8 @@ export default function InsuranceReport() {
       >
         <div className="flex items-start justify-between gap-2">
           <div>
-            <h1 className="text-base font-bold text-slate-100">Damage Dashboard</h1>
-            <p className="text-[11px] text-slate-500 mt-0.5">{claimId} · {lastUpdated}</p>
+            <h1 className="font-semibold" style={{ fontFamily: 'var(--font-sans)', fontSize: '18px' }}>Damage Dashboard</h1>
+            <p className="mt-0.5" style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)' }}>{claimId} · {lastUpdated}</p>
           </div>
           <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30 shrink-0">
             {status}
@@ -304,12 +392,12 @@ export default function InsuranceReport() {
 
         {/* Disclaimer */}
         <div
-          className="rounded-xl p-3 flex items-start gap-2.5"
-          style={{ background: '#0d1220', border: '1px solid #1e2d4a' }}
+          className="rounded-[8px] p-[12px_16px] flex items-start gap-3 mt-4"
+          style={{ background: 'rgba(245,166,35,0.06)', borderLeft: '3px solid var(--accent-amber)' }}
         >
-          <AlertTriangle size={13} className="text-yellow-400 shrink-0 mt-0.5" />
-          <p className="text-[11px] text-slate-500 leading-relaxed">
-            <span className="font-semibold text-slate-400">Disclaimer: </span>
+          <AlertTriangle size={14} style={{ color: 'var(--accent-amber)' }} className="shrink-0 mt-0.5" />
+          <p style={{ fontFamily: 'var(--font-sans)', color: 'var(--text-secondary)', fontSize: '12px', lineHeight: 1.5 }}>
+            <span className="font-semibold text-white">Disclaimer: </span>
             Pre-qualification assessment, does not replace licensed adjuster.
           </p>
         </div>
