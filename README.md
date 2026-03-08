@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./docs/logo.png" alt="CropClaim AI Logo" width="120" />
+  <img src="./docs/logo.svg" alt="CropClaim AI Logo" width="140" />
 </p>
 
 <h1 align="center">CropClaim AI</h1>
